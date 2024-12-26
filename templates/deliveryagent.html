@@ -1,179 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery Agent Dashboard</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery Agent Dashboard</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
+    /* General Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #ff5722;
-            color: white;
-            padding: 10px 20px;
-        }
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #fef6e4;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-        header h1 {
-            margin: 0;
-            font-size: 1.5rem;
-        }
+    /* Header Section */
+    header {
+      background-color: #ff5722;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-        .header-buttons {
-            display: flex;
-            gap: 15px;
-        }
+    header h1 {
+      font-size: 2rem;
+      margin: 0.5rem 0;
+    }
 
-        .header-buttons a,
-        .header-buttons button {
-            text-decoration: none;
-            background:#ff5722;
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-        }
+    header .header-buttons {
+      display: flex;
+      gap: 1rem;
+    }
 
-        .header-buttons button:hover,
-        .header-buttons a:hover {
-            background: #f45511;
-        }
+    header .btn {
+      background-color: white;
+      color: #ff5722;
+      border: none;
+      padding: 0.7rem 1rem;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: bold;
+      text-decoration: none;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.3s;
+    }
 
-        main {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-        }
+    header .btn:hover {
+      background-color: #ffd7b5;
+      transform: scale(1.05);
+    }
 
-        .dashboard-section {
-            margin-bottom: 20px;
-        }
+    /* Instructions Section */
+    .instructions {
+      padding: 2rem;
+      margin: 1rem auto;
+      max-width: 1200px;
+      background-color: #ffedcc;
+      border: 2px dashed #ff5722;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
 
-        .dashboard-section h2 {
-            margin: 0 0 15px;
-            font-size: 1.2rem;
-            color: #ff5722;
-        }
+    .instructions h2 {
+      text-align: center;
+      color: #ff5722;
+      margin-bottom: 1rem;
+    }
 
-        .order-card {
-            padding: 15px;
-            margin-bottom: 10px;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
+    .instructions ul {
+      list-style-type: disc;
+      padding-left: 2rem;
+    }
 
-        .order-card h3 {
-            margin: 0;
-        }
+    .instructions li {
+      font-size: 1rem;
+      margin: 0.5rem 0;
+      color: #444;
+    }
 
-        .order-card p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
+    /* Stats Section */
+    .stats {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      align-items: center;
+      margin: 2rem auto;
+      padding: 1rem;
+      flex-wrap: wrap;
+      max-width: 1200px;
+    }
 
-        .order-card button {
-            background: #ff5722;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
+    .stats .stat-item {
+      background-color: #ffffff;
+      padding: 2rem;
+      border-radius: 10px;
+      text-align: center;
+      width: 300px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+    }
 
-        .order-card button:hover {
-            background: #e64a19;
-        }
+    .stats .stat-item:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
 
-        footer {
-            text-align: center;
-            background: #ff5722;
-            color: white;
-            padding: 10px 20px;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
-    </style>
+    .stats .stat-item i {
+      font-size: 2.5rem;
+      color: #ff5722;
+      margin-bottom: 1rem;
+    }
+
+    .stats .stat-item h3 {
+      font-size: 1.4rem;
+      margin: 0.5rem 0;
+    }
+
+    .stats .stat-item p {
+      font-size: 1.1rem;
+      color: #666;
+    }
+
+    /* Footer */
+    footer {
+      background-color: #333;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      margin-top: auto;
+    }
+
+    footer p {
+      margin: 0.5rem 0;
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Delivery Agent Dashboard</h1>
-        <div class="header-buttons">
-            <button id="status-toggle">Go Online</button>
-            <a href="{{ url_for('delivery') }}">Home</a>
-        </div>
-    </header>
-    
-    <main>
-        <section class="dashboard-section">
-            <h2>Assigned Orders</h2>
-            <div class="order-card" id="order-101">
-                <h3>Order #101</h3>
-                <p><strong>Customer:</strong> John Doe</p>
-                <p><strong>Address:</strong> 123 Main Street, City</p>
-                <p><strong>Status:</strong> Pending</p>
-                <button class="start-delivery">Start Delivery</button>
-            </div>
-            <div class="order-card" id="order-102">
-                <h3>Order #102</h3>
-                <p><strong>Customer:</strong> Jane Smith</p>
-                <p><strong>Address:</strong> 456 Elm Street, City</p>
-                <p><strong>Status:</strong> Pending</p>
-                <button class="start-delivery">Start Delivery</button>
-            </div>
-        </section>
-
-        <section class="dashboard-section">
-            <h2>Earnings Summary</h2>
-            <p><strong>Today:</strong> 870/-</p>
-            <p><strong>This Week:</strong>6090/-</p>
-            <p><strong>This Month:</strong>24360/-</p>
-        </section>
-    </main>
-
-    <footer>
-        &copy; HIFI FOOD DELIVERY 
-    </footer>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const statusToggle = document.getElementById("status-toggle");
-
-            // Toggle Online/Offline Status
-            statusToggle.addEventListener("click", () => {
-                if (statusToggle.textContent === "Go Online") {
-                    statusToggle.textContent = "Go Offline";
-                    statusToggle.style.backgroundColor = "#f44336";
-                } else {
-                    statusToggle.textContent = "Go Online";
-                    statusToggle.style.backgroundColor = "#4CAF50";
-                }
-            });
-
-            // Start Delivery Button
-            const startDeliveryButtons = document.querySelectorAll(".start-delivery");
-            startDeliveryButtons.forEach(button => {
-                button.addEventListener("click", (e) => {
-                    const orderCard = e.target.parentElement;
-                    const status = orderCard.querySelector("p:last-child");
-                    status.innerHTML = "<strong>Status:</strong> In Progress";
-                });
-            });
-        });
-    </script>
+  <header>
+    <h1>Delivery Dashboard</h1>
+    <div class="header-buttons">
+      <a href="{{ url_for('delivery') }}"  class="btn">Home</a>
+      <a href="{{ url_for('delivery_status') }}"  class="btn">View Orders</a>
+      <a href="{{ url_for('delivery_issue') }}"  class="btn">Report Issue</a>
+      <button class="btn">
+        <i class="fas fa-bell"></i> Notifications
+      </button>
+    </div>
+  </header>
+  <div class="instructions">
+    <h2>Instructions for Delivery Agents</h2>
+    <ul>
+      <li>Always check the order details before proceeding with delivery.</li>
+      <li>Ensure the delivery address is accurate and reachable.</li>
+      <li>Contact the customer if you encounter any issues during delivery.</li>
+      <li>Maintain professionalism and polite communication with customers.</li>
+      <li>Update the delivery status promptly once the order is completed.</li>
+      <li>Keep an eye on your notifications for new updates or orders.</li>
+    </ul>
+  </div>
+  <div class="stats">
+    <div class="stat-item">
+      <i class="fas fa-box"></i>
+      <h3>Total Orders</h3>
+      <p>50</p>
+    </div>
+    <div class="stat-item">
+      <i class="fas fa-clock"></i>
+      <h3>Time Spent</h3>
+      <p>12 hrs</p>
+    </div>
+    <div class="stat-item">
+      <i class="fas fa-wallet"></i>
+      <h3>Income</h3>
+      <p>₹5,000</p>
+    </div>
+  </div>
+  <footer>
+    <p>© 2024 HiFiDelivery </p>
+    <p>Ensure to check notifications regularly for updates on new orders!</p>
+  </footer>
 </body>
 </html>
