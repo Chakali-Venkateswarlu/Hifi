@@ -20,7 +20,7 @@ body {
     display: flex;
     flex-direction: column;
     width: 380px;
-    height: 480px;
+    height: 540px;
     position: relative;
     /* margin: 6% auto; */
     background: white;

@@ -356,7 +356,7 @@ footer p {
             <ul> 
                 <li><a href="{{ url_for('info') }}"><i class="fa-solid fa-circle-info"></i> Info</a></li>
                 <li><a href="{{ url_for('contact') }}"><i class="fa-solid fa-user-astronaut"></i> Contact</a></li>
-                <li><a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a></li>
+                <li><a href="{{ url_for('viewprofile') }}"><i class="fa-solid fa-user"></i> Profile</a></li>
             </ul>
         </nav>
     </header>
@@ -368,13 +368,8 @@ footer p {
         <div>
             <h1>Delicious Food Delivered to You</h1>
             <p>Order your favorite meals from top restaurants with just a few clicks.</p>
-            <button onclick="navigateToLogin()">Order Now</button>
+            <button>Order Now</button>
         </div>
-        <script>
-            function navigateToLogin() {
-                window.location.href = "{{ url_for('login') }}";
-            }
-        </script>
     </div>
     <section class="food-items">
         <h2>Our Food Categories</h2>
@@ -410,7 +405,7 @@ footer p {
             <h3>Delivery Agent</h3>
             <img src="https://www.vhv.rs/dpng/d/433-4330684_our-delivery-service-home-delivery-logo-png-transparent.png" width="170px",height="200px">
             <p>View delivery tasks, manage orders, and track deliveries.</p>
-            <a href="delivery_agent_dashboard.html">Go to Delivery Agent Dashboard</a>
+            <a href="{{ url_for('delivery') }}">Go to Delivery Agent Dashboard</a>
         </div>
     </div>
 

@@ -146,7 +146,7 @@
         </div>
         <div class="contact-form">
             <h3>Send Us a Message</h3>
-            <form action="{{ url_for('submit_contact') }}" method="POST">
+            <form action="{{ url_for('contact') }}" method="POST">
                 <input type="text" name="name" placeholder="Your Name" required>
                 <input type="email" name="email" placeholder="Your Email" required>
                 <textarea name="message" rows="5" placeholder="Your Message" required></textarea>
@@ -159,4 +159,3 @@
 
 </section>
 </body>
-</html>
