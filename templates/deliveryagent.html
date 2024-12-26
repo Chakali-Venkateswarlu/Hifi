@@ -146,6 +146,15 @@
       margin: 0.5rem 0;
     }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+  <script type="text/javascript">
+      var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+
+      // Listen for new delivery notifications from the server
+      socket.on('new_delivery_notification', function(data) {
+          alert(data.message);  // Display the notification (You can customize this with a modal or a notification box)
+      });
+  </script>
 </head>
 <body>
   <header>

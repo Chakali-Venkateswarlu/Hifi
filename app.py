@@ -4,7 +4,7 @@ import time
 from flask import Flask, request, jsonify, render_template, session, flash, redirect, url_for
 from flask_mail import Mail, Message
 import sqlite3
-
+print('latest code ')
 app = Flask(__name__)
 app.secret_key = 'mysecrethifi'
 def init_db():
@@ -332,6 +332,9 @@ def approve_user(user_id):
     conn.close()
 
     return redirect(url_for('admin_approvals'))
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
