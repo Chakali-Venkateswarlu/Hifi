@@ -4,7 +4,7 @@ import time
 from flask import Flask, request, jsonify, render_template, session, flash, redirect, url_for
 from flask_mail import Mail, Message
 import sqlite3
-print('latest code ')
+
 app = Flask(__name__)
 app.secret_key = 'mysecrethifi'
 def init_db():
@@ -333,6 +333,31 @@ def approve_user(user_id):
 
     return redirect(url_for('admin_approvals'))
 
+@app.route('/submit_agent_issue',methods=['POST'])
+def submit_agent_issue():
+    if request.method == 'POST':
+        agent_name = request.form['agent_name']
+        order_id = request.form['order_id']
+        issue_type = request.form['issue_type']
+        details = request.form['details']
+        print(agent_name,order_id,issue_type,details)
+
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO Delivery_Agent_Report(Agent, OrderId, IssueType,IssueDetails)
+                    VALUES (?, ?, ?, ?)
+                """, (agent_name,order_id,issue_type,details))
+                conn.commit()
+                print("Done 1")
+
+            flash('Reported successfully', 'success')
+            return redirect(url_for('delivery'))
+        except sqlite3.OperationalError:
+            flash('Database is currently locked. Please try again later.', 'danger')
+            return redirect(url_for('delivery_issue'))
+    
 
 
 
