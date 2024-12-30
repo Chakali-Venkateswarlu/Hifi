@@ -5,47 +5,55 @@ from flask import Flask, request, jsonify, render_template, session, flash, redi
 from flask_mail import Mail, Message
 import sqlite3
 
+import atexit
+
 app = Flask(__name__)
 app.secret_key = 'mysecrethifi'
 def init_db():
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-    #Users Table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            username TEXT NOT NULL UNIQUE,
-            email TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL,
-            location TEXT,
-            contact TEXT,
-            approved INTEGER NOT NULL DEFAULT 0  -- 0 = pending, 1 = approved, -1 = rejected
-        )
-    """)
-    # Contact messages table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS contact_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            message TEXT NOT NULL
-        )
-    ''')
-
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Delivery_Agent_Report (
-	"Id"	INTEGER,
-	"Agent"	TEXT NOT NULL,
-	"OrderId"	INTEGER NOT NULL UNIQUE,
-	"IssueType"	TEXT NOT NULL,
-	"IssueDetails"	TEXT,
-	PRIMARY KEY("Id" AUTOINCREMENT)
-);
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect("database.db",timeout=30)
+        conn.execute("PRAGMA journal_mode=WAL;")  # Enable WAL for better concurrency
+        cursor = conn.cursor()
+        #Users Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                location TEXT,
+                contact TEXT,
+                approved INTEGER NOT NULL DEFAULT 0  -- 0 = pending, 1 = approved, -1 = rejected
+            )
+        """)
+        #Delivery Agent Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Delivery_Agent (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                location TEXT,
+                contact TEXT,
+                approved INTEGER NOT NULL DEFAULT 0  -- 0 = pending, 1 = approved, -1 = rejected
+            )
+        """)
+        # Contact messages table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contact_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                message TEXT NOT NULL
+            )
+        ''')    
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        print(f"Error initialising database: {e}")
+    finally:
+        conn.close() #Always close the connection
 init_db()
 
 # Flask-Mail configuration
@@ -103,45 +111,42 @@ def login():
                 SELECT * FROM users WHERE username = ? AND password = ?
             """, (username, password))
             user = cursor.fetchone()
-            print(user)
-
+            is_agent=False
+            if not user:
+                #check in delivery table if not found in users table
+                cursor.execute(""" SELECT * FROM Delivery_Agent WHERE username = ? AND password = ?""",(username,password))
+                user=cursor.fetchone()
+                is_agent=True if user else False
+                
+            
             if user:
+                #extract user details and set session variables
                 session['user_id'] = user[0]
                 session['username'] = user[1]
                 session['email'] = user[2]
-                session['role'] = user[4]
-                session['location'] = user[5]
-                session['contact'] = user[6]
-                if username == "admin" and password == "123456":
+                session['role'] = user[4] if not is_agent else 'Delivery Agent'
+                session['location'] = user[5] if len(user) > 5 else 'Not Provided'
+                session['contact'] = user[6] if len(user) > 6 else 'Not Provided'
+                
+                if session['role'].lower() == 'admin' and password == "123456":
                     flash('Login successful! Welcome back, Admin.', 'success')
-                    return redirect(url_for('admin'))  # Redirect to admin dashboard
+                    return redirect(url_for('admin'))  # Redirect to Admin dashboard
+                elif is_agent:
+                    flash('Login successful! Welcome back, Delivery Agent.', 'success')
+                    return redirect(url_for('delivery'))  # Redirect to Delivery Agent dashboard
                 else:
-                    role = user['role']  # Get the user's role
-                    if role == 'Customer':
-                        # if user[7] == 0:
-                        #     flash('Your account is pending approval.', 'warning')
-                        #     return redirect(url_for('login'))
-                        # elif user[7] == -1:
-                        #     flash('Your account has been rejected.', 'danger')
-                        #     return redirect(url_for('login'))
-                        # else:
-                            flash('Login successful! Welcome back, Customer.', 'success')
-                            return redirect(url_for('start'))  # Redirect to customer dashboard
-                    elif role == 'Agent':
-                        flash('Login successful! Welcome back, Agent.', 'success')
-                        return redirect(url_for('delivery'))  # Redirect to agent dashboard
-                # elif role == 'Admin':
-                #     flash('Login successful! Welcome back, Admin.', 'success')
-                #     return redirect(url_for('admin'))  # Redirect to admin dashboard
+                    flash('Login successful! Welcome back, Customer.', 'success')
+                    return redirect(url_for('start'))  # Redirect to Customer dashboard
             else:
                 flash('Invalid username or password. Please try again.', 'danger')
 
     return render_template('login.html')
 
 def get_db_connection():
-    conn = sqlite3.connect('database.db', timeout=10)  # Timeout to avoid lock
+    conn = sqlite3.connect('database.db', timeout=30)  # Timeout to avoid lock
     conn.row_factory = sqlite3.Row
     return conn
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -153,21 +158,33 @@ def register():
         location = request.form['location']
         contact = request.form['contact']
 
+        print(f'Role received:{role}')
+        
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("""
+                print("Connection opened successfully.")
+                if role.lower() == "agent":
+                    cursor.execute("""
+                    INSERT INTO Delivery_Agent (username, password, email, role, location, contact)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (username, password, email, role, location, contact))
+                else:
+                    cursor.execute("""
                     INSERT INTO users (username, password, email, role, location, contact)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (username, password, email, role, location, contact))
+                
                 conn.commit()
-
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
-        except sqlite3.OperationalError:
-            flash('Database is currently locked. Please try again later.', 'danger')
-            return redirect(url_for('register'))
-
+        except sqlite3.OperationalError as e:
+            flash(f'Database is currently locked: {e}', 'danger')
+        except sqlite3.IntegrityError:
+            flash('Username or email already exists. Please use another.', 'danger')
+        except Exception as e:
+            flash(f'Error during Registration: {e}','danger')
+            
     return render_template('register.html')  # Ensure register.html is your registration page
 
 @app.route('/info')
