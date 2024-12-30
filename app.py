@@ -33,6 +33,17 @@ def init_db():
             message TEXT NOT NULL
         )
     ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS Delivery_Agent_Report (
+	"Id"	INTEGER,
+	"Agent"	TEXT NOT NULL,
+	"OrderId"	INTEGER NOT NULL UNIQUE,
+	"IssueType"	TEXT NOT NULL,
+	"IssueDetails"	TEXT,
+	PRIMARY KEY("Id" AUTOINCREMENT)
+);
+    ''')
     conn.commit()
     conn.close()
 init_db()

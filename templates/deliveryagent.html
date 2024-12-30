@@ -40,6 +40,7 @@
     header .header-buttons {
       display: flex;
       gap: 1rem;
+      position: relative; /* To position the notification count */
     }
 
     header .btn {
@@ -59,6 +60,136 @@
     header .btn:hover {
       background-color: #ffd7b5;
       transform: scale(1.05);
+    }
+        /* Notification Count */
+    .notification-count {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background-color: rgb(11, 131, 7); /* Orange background */
+      color: white;
+      font-size: 0.9rem;
+      text-align: center;
+      line-height: 18px;
+      visibility: hidden; /* Hidden by default */
+    }
+
+    /* Notification Box */
+    .notification-box {
+      position: fixed;
+      top: 17%;
+      right: 2%; 
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      width: 250px;
+      display: none;
+      z-index: 1000;
+    }
+
+    .notification-box h4 {
+      font-size: 1.2rem;
+      color: #ff5722;
+      margin-bottom: 1rem;
+    }
+
+    .notification-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .notification-box li {
+      padding: 0.5rem;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 0.5rem;
+      position: relative; /* To position the delete icon */
+    }
+
+    .notification-box li:last-child {
+      border-bottom: none;
+    }
+
+    .notification-actions {
+      margin-top: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .notification-btn {
+      position: relative;
+    }
+
+    /* Notification Count inside notification-btn */
+    .notification-btn .notification-count {
+      visibility: hidden; /* Hidden by default */
+    }
+
+    
+    .accept-btn, .reject-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      
+    }
+
+    .accept-btn {
+      background-color: #4caf50;
+      color: white;
+    }
+    .accept-btn:hover {
+      background-color: #45a049; /* Darker green on hover */
+      transform: translateY(-3px); /* Lift effect */
+      box-shadow: 0 8px 14px rgba(76, 175, 80, 0.4); /* Larger shadow on hover */
+    }
+
+    .reject-btn {
+      background-color:rgb(244, 87, 76);
+      color: white;
+    }
+    .reject-btn:hover {
+      background-color: rgb(233, 67, 50); /* Darker red on hover */
+      transform: translateY(-3px); /* Lift effect */
+      box-shadow: 0 8px 14px rgba(244, 87, 76, 0.4); /* Larger shadow on hover */
+    }
+
+    /* Position the delete icon */
+    .delete-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #d3d3d3; /* Light gray color */
+      visibility: hidden; /* Hidden by default */
+    }
+
+    .delete-btn:hover {
+      color: #d32f2f;
+    }
+
+    /* View button */
+    .view-btn {
+      background-color:rgb(63, 180, 227);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 0.5rem; /* Adds space above the button to move it down */
+    }
+
+    .view-btn:hover {
+      background-color:rgb(54, 146, 216);
+      transform: translateY(-3px); /* Lift effect */
     }
 
     /* Instructions Section */
@@ -141,32 +272,24 @@
       padding: 1rem;
       margin-top: auto;
     }
-
-    footer p {
-      margin: 0.5rem 0;
-    }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
-  <script type="text/javascript">
-      var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-
-      // Listen for new delivery notifications from the server
-      socket.on('new_delivery_notification', function(data) {
-          alert(data.message);  // Display the notification (You can customize this with a modal or a notification box)
-      });
-  </script>
 </head>
 <body>
   <header>
     <h1>Delivery Dashboard</h1>
     <div class="header-buttons">
-      <a href="{{ url_for('delivery') }}"  class="btn">Home</a>
-      <a href="{{ url_for('delivery_status') }}"  class="btn">View Orders</a>
-      <a href="{{ url_for('delivery_issue') }}"  class="btn">Report Issue</a>
-      <button class="btn">
+      <a href="{{ url_for('delivery') }}" class="btn">Home</a>
+      <a href="{{ url_for('delivery_status') }}" class="btn">View Orders</a>
+      <a href="{{ url_for('delivery_issue') }}" class="btn">Help Center</a>
+     
+      <button class="btn notification-btn" id="notification-btn">
         <i class="fas fa-bell"></i> Notifications
+        <div class="notification-count" id="notification-count"></div>
       </button>
+      
+      <a href="{{ url_for('start') }}" class="btn">logout</a>
     </div>
+    
   </header>
   <div class="instructions">
     <h2>Instructions for Delivery Agents</h2>
@@ -196,9 +319,119 @@
       <p>₹5,000</p>
     </div>
   </div>
+
+  <div class="notification-box" id="notification-box">
+    <h4>New Notifications</h4>
+    <ul id="notification-list">
+      <li data-order-id="1234">
+        New delivery assignment for Order #1234
+        <div class="notification-actions">
+          <button class="accept-btn">Accept</button>
+          <button class="reject-btn">Reject</button>
+        </div>
+        <button class="delete-btn" onclick="deleteNotification(this)"><i class="fas fa-trash"></i></button>
+      </li>
+      <li data-order-id="1235">
+        New delivery assignment for Order #1235
+        <div class="notification-actions">
+          <button class="accept-btn">Accept</button>
+          <button class="reject-btn">Reject</button>
+        </div>
+        <button class="delete-btn" onclick="deleteNotification(this)"><i class="fas fa-trash"></i></button>
+      </li>
+    </ul>
+  </div>
+
   <footer>
-    <p>© 2024 HiFiDelivery </p>
+    <p>© 2024 HiFiDelivery</p>
     <p>Ensure to check notifications regularly for updates on new orders!</p>
   </footer>
+
+  <script>
+    const notificationBtn = document.getElementById('notification-btn');
+    const notificationBox = document.getElementById('notification-box');
+    const notificationCount = document.getElementById('notification-count');
+
+    // Update the notification count
+    function updateNotificationCount() {
+        const unreadNotifications = document.querySelectorAll('.notification-box li.unread').length;
+        notificationCount.textContent = unreadNotifications;
+        notificationCount.style.visibility = unreadNotifications > 0 ? 'visible' : 'hidden';
+    }
+
+    // Toggle notification box visibility
+    notificationBtn.addEventListener('click', () => {
+        notificationBox.style.display =
+            notificationBox.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Handle Accept action
+function handleAccept(button) {
+  const notification = button.closest('li');
+  const orderId = notification.getAttribute('data-order-id');
+
+  notification.innerHTML = `Order #${orderId} accepted. 
+     <button class="view-btn" onclick="window.location.href='deliverystatus.html'">View</button>
+      <button class="delete-btn" onclick="deleteNotification(this)">
+          <i class="fas fa-trash"></i>
+      </button>`;
+  notification.style.backgroundColor = '#e8f5e9'; // Green for accepted
+  notification.classList.remove('unread'); // Mark as read
+  // Make the delete button visible
+  const deleteBtn = notification.querySelector('.delete-btn');
+  deleteBtn.style.visibility = 'visible';
+  updateNotificationCount(); // Update count
+}
+
+// Handle Reject action
+function handleReject(button) {
+  const notification = button.closest('li');
+  const orderId = notification.getAttribute('data-order-id');
+
+  notification.innerHTML = `Order #${orderId} rejected. 
+      <button class="delete-btn" onclick="deleteNotification(this)">
+          <i class="fas fa-trash"></i>
+      </button>`;
+  notification.style.backgroundColor = '#ffebee'; // Red for rejected
+  notification.classList.remove('unread'); // Mark as read
+  // Make the delete button visible
+  const deleteBtn = notification.querySelector('.delete-btn');
+  deleteBtn.style.visibility = 'visible';
+  updateNotificationCount(); // Update count
+}
+
+
+    // Delete a notification
+    function deleteNotification(button) {
+        const notification = button.closest('li');
+        notification.remove(); // Remove from DOM
+        updateNotificationCount(); // Update count
+    }
+
+    // Attach listeners for accept and reject buttons
+    function attachNotificationListeners() {
+        document.querySelectorAll('.accept-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                handleAccept(this);
+            });
+        });
+
+        document.querySelectorAll('.reject-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                handleReject(this);
+            });
+        });
+    }
+
+    // Initial setup
+    document.querySelectorAll('.notification-box li').forEach(notification => {
+        notification.classList.add('unread'); // Mark all as unread initially
+    });
+
+    attachNotificationListeners(); // Add event listeners
+    updateNotificationCount(); // Initial count update
+</script>
+
+
 </body>
 </html>
