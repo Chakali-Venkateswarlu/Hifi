@@ -194,23 +194,34 @@ def info():
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
     if request.method == 'POST':
-        name = request.form['name']
-        email = request.form['email']
+        name = request.form['name'].strip()
+        email = request.form['email'].strip()
         message = request.form['message']
+        name = name.lower()
+        try:
+            # Connect to the database
+            with sqlite3.connect('database.db') as conn:
+                cursor = conn.cursor()
+                # Perform a case-insensitive check using COLLATE NOCASE
+                cursor.execute('SELECT * FROM users where email = ?', (email,))
+                user = cursor.fetchone()
 
-        # Save the contact message to the database
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO contact_messages (name, email, message)
-            VALUES (?, ?, ?)
-        ''', (name, email, message))
-        conn.commit()
-        conn.close()
+                if user:
+                    # Insert the contact message into the 'contact_messages' table
+                    cursor.execute('''
+                        INSERT INTO contact_messages (name, email, message)
+                        VALUES (?, ?, ?)
+                    ''', (name, email, message))
+                    conn.commit()
+                    flash("Feedback taken successfully", "success")
+                else:
+                    flash("Email  does not exist", "danger")
 
-        flash("Message sent successfully!", "success")
-        return redirect(url_for('contact'))
+        except sqlite3.Error as e:
+            flash(f"An error occurred: {str(e)}", "danger")
+
     return render_template('contact.html')
+
 
 @app.route('/forgot')
 def forgot():
