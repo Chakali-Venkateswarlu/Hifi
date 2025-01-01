@@ -21,7 +21,7 @@
         }
 
         .container {
-            background: rgba(235, 211, 211, 0.9);
+            background: rgba(235, 211, 211, 0.9); /* Semi-transparent background */
             padding: 25px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -99,39 +99,34 @@
             color: #0056b3;
             text-decoration: underline;
         }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            input, button {
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Forgot Password</h2>
-
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <ul>
-            {% for message in messages %}
-            <li style="color: red;">{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        {% endwith %}
-
-        <form action="{{ url_for('forgot_password') }}" method="POST" onsubmit="return validateForm()">
+        <form action="{{ url_for('forgot_password') }}" method="POST" onsubmit="return validatePasswords()">
             <label for="identifier">Username or Email:</label>
-            <input type="text" id="email" name="email" 
-                   placeholder="Enter your username or email" 
-                   required pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" 
-                   title="Please enter a valid email address containing '@' and '.'">
+            <input type="text" id="identifier" name="identifier" placeholder="Enter your username or email" required>
 
-            <button type="button" onclick="sendOtp()">Send OTP</button>
-
-            <label for="otp">Enter OTP:</label>
-            <input type="text" id="otp" name="otp" placeholder="Enter the OTP sent to your email" required>
-
+            
             <label for="new_password">New Password:</label>
-            <input type="password" id="new_password" name="new_password" 
-                   placeholder="Enter new password" required 
-                   pattern="(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}" 
-                   title="Password must contain at least 8 characters, including letters and numbers">
+            <input type="password" id="new_password" name="new_password" placeholder="Enter new password" required>
 
             <label for="re_new_password">Re-enter New Password:</label>
             <input type="password" id="re_new_password" name="re_new_password" placeholder="Re-enter new password" required>
@@ -145,38 +140,7 @@
     </div>
 
     <script>
-        function sendOtp() {
-            const identifier = document.getElementById('identifier').value;
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-            if (!emailPattern.test(identifier)) {
-                alert('Please enter a valid email address containing "@" and a domain.');
-                return;
-            }
-        }
-
-            // Example POST request to Flask server to send OTP
-            fetch('/send_otp', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ email: 'user@example.com' })
-})
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-        } else {
-            alert(`Error: ${data.message}`);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-
-
-        function validateForm() {
+        function validatePasswords() {
             const newPassword = document.getElementById('new_password').value;
             const reNewPassword = document.getElementById('re_new_password').value;
 
@@ -185,6 +149,9 @@
                 return false;
             }
             return true;
+        }
+        function resetPasswordSuccess() {
+            alert('Password reset successful. Please check your email.');
         }
     </script>
 </body>
