@@ -432,7 +432,7 @@ function handleAccept(button) {
   const orderId = notification.getAttribute('data-order-id');
 
   notification.innerHTML = `Order #${orderId} accepted. 
-     <button class="view-btn" onclick="window.location.href='deliverystatus.html'">View</button>
+     <button class="view-btn" onclick="window.location.href='deliverystatus'">View</button>
       <button class="delete-btn" onclick="deleteNotification(this)">
           <i class="fas fa-trash"></i>
       </button>`;
