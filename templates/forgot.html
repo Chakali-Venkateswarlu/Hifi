@@ -140,42 +140,7 @@
     </div>
 
     <script>
-<<<<<<< HEAD
-        function sendOtp() {
-            const identifier = document.getElementById('identifier').value;
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-            if (!emailPattern.test(identifier)) {
-                alert('Please enter a valid email address containing "@" and a domain.');
-                return;
-            }
-        }
-
-            // Example POST request to Flask server to send OTP
-            fetch('/send_otp', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ email: email })
-})
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-        } else {
-            alert(`Error: ${data.message}`);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-
-
-        function validateForm() {
-=======
         function validatePasswords() {
->>>>>>> caf225bf02758505a981d4f10d3ebecc6de03d44
             const newPassword = document.getElementById('new_password').value;
             const reNewPassword = document.getElementById('re_new_password').value;
 

@@ -155,6 +155,7 @@ def register():
         password = request.form['password']
         email = request.form['email']
         role = request.form['role']
+        confirm_password = request.form['confirm_password']
         location = request.form['location']
         contact = request.form['contact']
 
@@ -164,7 +165,7 @@ def register():
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 print("Connection opened successfully.")
-                if role.lower() == "agent":
+                if role.lower() == "deliveryagent":
                     cursor.execute("""
                     INSERT INTO Delivery_Agent (username, password, email, role, location, contact)
                     VALUES (?, ?, ?, ?, ?, ?)
@@ -197,13 +198,13 @@ def contact():
         name = request.form['name'].strip()
         email = request.form['email'].strip()
         message = request.form['message']
-        name = name.lower()
+        print(name)
         try:
             # Connect to the database
             with sqlite3.connect('database.db') as conn:
                 cursor = conn.cursor()
                 # Perform a case-insensitive check using COLLATE NOCASE
-                cursor.execute('SELECT * FROM users where email = ?', (email,))
+                cursor.execute('select * from users where email = ?',(email,))
                 user = cursor.fetchone()
 
                 if user:
