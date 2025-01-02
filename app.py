@@ -4,7 +4,6 @@ import time
 from flask import Flask, request, jsonify, render_template, session, flash, redirect, url_for
 from flask_mail import Mail, Message
 import sqlite3
-
 import atexit
 
 app = Flask(__name__)
