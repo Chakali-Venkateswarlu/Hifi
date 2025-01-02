@@ -4,6 +4,7 @@ import time
 from flask import Flask, request, jsonify, render_template, session, flash, redirect, url_for
 from flask_mail import Mail, Message
 import sqlite3
+import secrets
 import atexit
 
 app = Flask(__name__)
@@ -64,39 +65,39 @@ app.config['MAIL_PASSWORD'] = 'oiya zlhv irvc yowz'  # Replace with your app-spe
 
 mail = Mail(app)
 # Store OTPs in memory (can be changed to a database in production)
-otp_store = {}
+# otp_store = {}
 
-# Send OTP to the email
-def send_otp(email, otp):
-    try:
-        msg = Message('Your OTP Code', sender=app.config['MAIL_USERNAME'], recipients=[email])
-        msg.body = f"Your OTP code is {otp}. It will expire in 10 minutes."
-        mail.send(msg)
-        print(f"OTP sent to {email}")
-    except Exception as e:
-        print(f"Error sending OTP: {e}")
-        return False
-    return True
+# # Send OTP to the email
+# def send_otp(email, otp):
+#     try:
+#         msg = Message('Your OTP Code', sender=app.config['MAIL_USERNAME'], recipients=[email])
+#         msg.body = f"Your OTP code is {otp}. It will expire in 10 minutes."
+#         mail.send(msg)
+#         print(f"OTP sent to {email}")
+#     except Exception as e:
+#         print(f"Error sending OTP: {e}")
+#         return False
+#     return True
 
 @app.route('/home') 
 def start():
     return render_template('homepage.html')
 
-@app.route('/send_otp', methods=['POST'])
-def send_otp_route():
-    data = request.get_json()
-    email = data.get('email')
+# @app.route('/send_otp', methods=['POST'])
+# def send_otp_route():
+#     data = request.get_json()
+#     email = data.get('email')
 
-    if not email or not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
-        return jsonify({'success': False, 'message': 'Invalid email format.'})
+#     if not email or not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+#         return jsonify({'success': False, 'message': 'Invalid email format.'})
 
-    otp = str(random.randint(100000, 999999))
-    otp_store[email] = {'otp': otp, 'timestamp': time.time()}  # Store OTP with timestamp
+#     otp = str(random.randint(100000, 999999))
+#     otp_store[email] = {'otp': otp, 'timestamp': time.time()}  # Store OTP with timestamp
 
-    if send_otp(email, otp):
-        return jsonify({'success': True, 'message': 'OTP sent to email.'})
-    else:
-        return jsonify({'success': False, 'message': 'Error sending OTP.'})
+#     if send_otp(email, otp):
+#         return jsonify({'success': True, 'message': 'OTP sent to email.'})
+#     else:
+#         return jsonify({'success': False, 'message': 'Error sending OTP.'})
 
 @app.route('/',methods=['GET', 'POST'])
 def login():
@@ -222,10 +223,88 @@ def contact():
     return render_template('contact.html')
 
 
+# @app.route('/forgot')
+# def forgot():
+#     return render_template('forgot.html')
+#forgot password
 @app.route('/forgot')
 def forgot():
     return render_template('forgot.html')
 
+# Route for handling recovery form submission
+@app.route('/recovery', methods=['GET', 'POST'])
+def recovery():
+    if request.method == 'POST':
+        email = request.form['email']
+        
+        # Connect to the database to check if the email exists
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email=?", (email,))
+        user = cursor.fetchone()
+        
+        if user:
+            # Generate a unique token for the recovery link
+            token = secrets.token_urlsafe(16)  # Generate a random token
+            
+            # Create the recovery URL
+            recovery_link = url_for('forgot_password', token=token, _external=True)
+            
+            # Send the recovery email with the link
+            msg = Message('Password Recovery Link', recipients=[email],sender='hifidelivery213@gmail.com')
+            msg.body = f'Click the link to reset your password: {recovery_link}'
+            mail.send(msg)
+            
+            # Redirect to the confirmation page (forgot.html)
+            return render_template('recovery.html', message="A recovery link has been sent to your email address.")
+        else:
+            conn.close()
+            return render_template('recovery.html', error="Invalid email address. Please try again.")
+    
+    return render_template('recovery.html')
+
+# Route to show the forgot password page when clicking the recovery link
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    token = request.args.get('token')  # Get the token from the URL
+    if request.method == 'POST':
+        identifier = request.form.get('identifier')  # Can be email or username
+        new_password = request.form.get('new_password')
+        re_new_password = request.form.get('re_new_password')
+
+        if new_password != re_new_password:
+            flash('Passwords do not match. Please try again.', 'error')
+            return redirect(url_for('forgot_password', token=token))
+
+        # Hash the new password before storing it (optional but recommended for security)
+        hashed_password = new_password  # Replace with hash function if needed
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        
+        try:
+            # Update password for the user identified by email or username
+            cursor.execute(
+                "UPDATE users SET password=? WHERE email=? OR username=?", 
+                (hashed_password, identifier, identifier)
+            )
+            conn.commit()
+
+            # Check if any row was updated
+            if cursor.rowcount == 0:
+                flash('No user found with the provided email or username.', 'error')
+                return redirect(url_for('forgot_password', token=token))
+
+            flash('Password reset successful. Please log in with your new password.', 'success')
+            return redirect(url_for('login'))  # Replace 'login' with your login route
+        except Exception as e:
+            flash(f'An error occurred: {str(e)}', 'error')
+            return redirect(url_for('forgot_password', token=token))
+        finally:
+            conn.close()
+
+    return render_template('forgot.html')  # The page where users reset their password
+#forgot password end
 @app.route('/admin')
 def admin():
     return render_template('admin.html')
@@ -242,9 +321,9 @@ def delivery_status():
 def delivery_issue():
     return render_template('deliveryissue.html')
 
-@app.route('/recovery')
-def recovery():
-    return render_template('recovery.html')
+# @app.route('/recovery')
+# def recovery():
+#     return render_template('recovery.html')
 
 @app.route('/update_details', methods=['GET', 'POST'])
 def update_details():
@@ -322,20 +401,20 @@ def logout():
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('login'))
 
-@app.route('/forgot_password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        identifier = request.form.get('identifier')
-        new_password = request.form.get('new_password')
-        re_new_password = request.form.get('re_new_password')
-        print(f'identifier:{identifier}\nnew_password:{new_password}\nre-new-password:{re_new_password}')
-        if new_password != re_new_password:
-            flash('Passwords do not match. Please try again.', 'error')
-            return redirect(url_for('forgot_password'))
-        flash('Password reset successful. Please log in with your new password.', 'success')
-        return redirect(url_for('start'))
+# @app.route('/forgot_password', methods=['GET', 'POST'])
+# def forgot_password():
+#     if request.method == 'POST':
+#         identifier = request.form.get('identifier')
+#         new_password = request.form.get('new_password')
+#         re_new_password = request.form.get('re_new_password')
+#         print(f'identifier:{identifier}\nnew_password:{new_password}\nre-new-password:{re_new_password}')
+#         if new_password != re_new_password:
+#             flash('Passwords do not match. Please try again.', 'error')
+#             return redirect(url_for('forgot_password'))
+#         flash('Password reset successful. Please log in with your new password.', 'success')
+#         return redirect(url_for('start'))
 
-    return render_template(url_for('forgot'))
+#     return render_template(url_for('forgot'))
 
 @app.route('/admin/approvals', methods=['GET'])
 def admin_approvals():
