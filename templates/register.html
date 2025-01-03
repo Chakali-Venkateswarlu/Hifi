@@ -16,7 +16,7 @@
       min-height: 100vh;
       margin: 0;
       display: flex;
-      background: url('img/img.jpg') no-repeat center center fixed;
+      background:  url("{{url_for('static',filename='img.jpg')}}") no-repeat center center fixed;
       background-size: cover;
     }
 
@@ -97,6 +97,27 @@
       text-align: center;
       margin-top: 15px;
     }
+    .form-container p {
+  font-size: 14px;
+  color: #555; /* Neutral gray for readability */
+  background: rgba(252, 128, 25, 0.1); /* Light orange background */
+  border-left: 4px solid #fc8019; /* Orange left border for emphasis */
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: -10px; /* To slightly overlap the input above */
+  margin-bottom: 15px; /* Proper spacing after the paragraph */
+  font-style: italic; /* Subtle differentiation */
+  line-height: 1.5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Light shadow for depth */
+}
+#password-hint {
+  font-size: 14px;
+  color: #fc8019; /* Default orange for instructions */
+  margin-top: -10px;
+  margin-bottom: 15px;
+  line-height: 1.5;
+  font-style: italic;
+}
 
     .form-container .login-link a {
       color: #fc8019; /* Swiggy orange for links */
@@ -158,6 +179,28 @@
             display: block;
             animation: fadeInOut 3s forwards;
         }
+
+        #password-hint {
+  font-size: 14px;
+  margin-top: -10px;
+  margin-bottom: 15px;
+  line-height: 1.5;
+  font-style: italic;
+  transition: color 0.3s ease;
+}
+
+#password-hint.green {
+  color: green;
+}
+
+#password-hint.orange {
+  color: orange;
+}
+
+#password-hint.red {
+  color: red;
+}
+
   </style>
 </head>
 <body>
@@ -205,7 +248,11 @@
         
         <label for="password">Password</label>
         <input type="password" id="password" name="password" placeholder="Choose a password" required>
-
+        <!-- <p>'Password must be at least 8 characters long and include at least one number and one special character.'</p> -->
+        <p id="password-hint">
+          Password must be at least 8 characters long and include at least one letter, one digit, and one special character.
+        </p>
+        
         <label for="confirm-password">Confirm Password</label>
         <input type="password" id="confirm-password" name="confirm_password" placeholder="Re-enter your password" required>
         
@@ -222,5 +269,50 @@
       </div>
     </div>
   </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const passwordInput = document.getElementById("password");
+      const confirmPasswordInput = document.getElementById("confirm-password");
+      const passwordHint = document.getElementById("password-hint");
+  
+      passwordInput.addEventListener("input", () => {
+        const password = passwordInput.value;
+  
+        // Regex for validation
+        const hasLetter = /[a-zA-Z]/.test(password);
+        const hasDigit = /\d/.test(password);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        const isLongEnough = password.length >= 8;
+  
+        // Determine password strength
+        if (hasLetter && hasDigit && hasSpecial && isLongEnough) {
+          passwordHint.style.color = "green";
+          passwordHint.textContent = "Password is strong!";
+        } else if (
+          (hasLetter && hasDigit && isLongEnough) || // Missing special character
+          (hasLetter && hasSpecial && isLongEnough) || // Missing digit
+          (hasDigit && hasSpecial && isLongEnough) // Missing letter
+        ) {
+          passwordHint.style.color = "orange";
+          passwordHint.textContent =
+            "Password is moderate.";
+        } else {
+          passwordHint.style.color = "red";
+          passwordHint.textContent =
+            "Password is weak.";
+        }
+      });
+  
+      confirmPasswordInput.addEventListener("input", () => {
+        if (confirmPasswordInput.value !== passwordInput.value) {
+          confirmPasswordInput.setCustomValidity("Passwords do not match!");
+        } else {
+          confirmPasswordInput.setCustomValidity("");
+        }
+      });
+    });
+  </script>
+  
+  
 </body>
 </html>

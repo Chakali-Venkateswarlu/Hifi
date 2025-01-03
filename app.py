@@ -153,29 +153,44 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        confirm_password = request.form['confirm_password']
         email = request.form['email']
         role = request.form['role']
-        confirm_password = request.form['confirm_password']
         location = request.form['location']
         contact = request.form['contact']
 
-        print(f'Role received:{role}')
-        
+        print(f'Role received: {role}')
+
+        # Validating password: must be at least 8 characters with at least one number and one special character
+        password_pattern = re.compile(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$')
+        if not password_pattern.match(password):
+            flash('Password must be at least 8 characters long and include at least one number and one special character.', 'danger')
+            return render_template('register.html')
+
+        # Validate mobile number: must be exactly 10 digits
+        if not re.fullmatch(r'\d{10}', contact):
+            flash('Mobile number must be exactly 10 digits.', 'danger')
+            return render_template('register.html')
+
+        # Validate password confirmation
+        if password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return render_template('register.html')
+
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 print("Connection opened successfully.")
                 if role.lower() == "deliveryagent":
                     cursor.execute("""
-                    INSERT INTO Delivery_Agent (username, password, email, role, location, contact)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (username, password, email, role, location, contact))
+                        INSERT INTO Delivery_Agent (username, password, email, role, location, contact)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (username, password, email, role, location, contact))
                 else:
                     cursor.execute("""
-                    INSERT INTO users (username, password, email, role, location, contact)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (username, password, email, role, location, contact))
-                
+                        INSERT INTO users (username, password, email, role, location, contact)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (username, password, email, role, location, contact))
                 conn.commit()
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
@@ -184,8 +199,8 @@ def register():
         except sqlite3.IntegrityError:
             flash('Username or email already exists. Please use another.', 'danger')
         except Exception as e:
-            flash(f'Error during Registration: {e}','danger')
-            
+            flash(f'Error during Registration: {e}', 'danger')
+
     return render_template('register.html')  # Ensure register.html is your registration page
 
 @app.route('/info')
