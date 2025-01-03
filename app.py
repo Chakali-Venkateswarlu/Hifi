@@ -492,6 +492,44 @@ def submit_agent_issue():
             return redirect(url_for('delivery_issue'))
     
 
+# Function to fetch all users
+def get_all_users():
+    conn = sqlite3.connect("database.db", timeout=30)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users")
+    users = cursor.fetchall()  # Fetch all rows
+    conn.close()
+    return users
+
+# Function to fetch all delivery agents
+def get_all_delivery_agents():
+    conn = sqlite3.connect("database.db", timeout=30)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Delivery_Agent")
+    agents = cursor.fetchall()  # Fetch all rows
+    conn.close()
+    return agents
+@app.route('/manageuser')
+def view_users_agents():
+    # Fetch users and delivery agents
+    users = get_all_users()
+    agents = get_all_delivery_agents()
+
+    # Pass the data to the template
+    return render_template('manageuser.html', users=users, agents=agents)
+
+@app.route('/agent_issues', methods=['GET'])
+def agent_issues():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM Delivery_Agent_Report")  # Adjust as per your schema
+            reports = cursor.fetchall()  # Fetch all records
+        return render_template('agent_issues.html', reports=reports)
+    except sqlite3.OperationalError:
+        flash('Database is currently locked. Please try again later.', 'danger')
+        return redirect(url_for('delivery'))
+
 
 
 if __name__ == '__main__':
