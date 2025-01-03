@@ -1,16 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Food Delivery Agent Performance</title>
 <style>
 body {
   font-family: sans-serif;
-  background-color:#ffedcc;
+  background-color: #ffedcc;
+  margin: 0;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  background-color: #d37d21;
+  padding: 10px;
+}
+
+.navbar h2 {
+  color: white;
+  margin: 0;
+}
+
+.navbar .home-button {
+  background-color: #e98e51;
+  color: white;
+  padding: 10px 20px;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.navbar .home-button:hover {
+  background-color: #e3a21f;
 }
 
 .container {
   width: 80%;
-  margin: 0 auto;
+  margin: 20px auto;
 }
 
 table {
@@ -35,6 +60,11 @@ th {
 </style>
 </head>
 <body>
+
+<div class="navbar">
+  <h2>Food Delivery Agent Performance</h2>
+  <a href="deliveryagent.html" class="home-button">Home</a>
+</div>
 
 <div class="container">
   <h1>Food Delivery Agent Performance</h1>
