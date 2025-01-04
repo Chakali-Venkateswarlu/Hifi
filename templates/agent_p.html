@@ -69,35 +69,33 @@ th {
 <div class="container">
   <h1>Food Delivery Agent Performance</h1>
 
-  <h2>Monthly Performance</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Month</th>
-        <th>Orders Delivered</th>
-        <th>On-Time Deliveries</th>
-        <th>Customer Ratings</th>
-        <th>Cancellation Rate</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>January</td>
-        <td>150</td>
-        <td>140</td>
-        <td>4.5</td>
-        <td>2%</td>
-      </tr>
-      <tr>
-        <td>February</td>
-        <td>180</td>
-        <td>175</td>
-        <td>4.7</td>
-        <td>1.5%</td>
-      </tr>
-      </tbody>
-  </table>
-
+  <h2>Monthly Performance Data</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Orders Delivered</th>
+                <th>On-Time Deliveries</th>
+                <th>Customer Ratings</th>
+                <th>Cancellation Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in performance_table_data %}
+            <tr>
+                <td>{{ data.month }}</td>
+                <td>{{ data.orders }}</td>
+                <td>{{ data.on_time }}</td>
+                <td>{{ data.ratings }}</td>
+                <td>{{ data.cancellations }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="chart-container">
+      <h2>Monthly Performance</h2>
+      <img src="{{ url_for('static', filename='images/' + chart_filename) }}" alt="Monthly Performance Chart">
+  </div>
   <h2>Yearly Performance</h2>
   <table>
     <thead>

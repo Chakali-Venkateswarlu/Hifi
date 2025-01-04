@@ -5,13 +5,28 @@ from flask import Flask, request, jsonify, render_template, session, flash, redi
 from flask_mail import Mail, Message
 import sqlite3
 import secrets
-import atexit
+import matplotlib.pyplot as plt
+from datetime import datetime
+import os
+
+
 
 app = Flask(__name__)
+
+IMAGE_FOLDER = 'static/images'
+
+# Ensure the image folder exists
+if not os.path.exists(IMAGE_FOLDER):
+    os.makedirs(IMAGE_FOLDER)
+
+# Set the IMAGE_FOLDER in app.config
+app.config['IMAGE_FOLDER'] = IMAGE_FOLDER
+
+
 app.secret_key = 'mysecrethifi'
 def init_db():
     try:
-        conn = sqlite3.connect("database.db",timeout=30)
+        conn = sqlite3.connect("HifiEats.db",timeout=30)
         conn.execute("PRAGMA journal_mode=WAL;")  # Enable WAL for better concurrency
         cursor = conn.cursor()
         #Users Table
@@ -32,7 +47,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS Delivery_Agent (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
-                email TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL ,
                 password TEXT NOT NULL,
                 role TEXT NOT NULL,
                 location TEXT,
@@ -48,13 +63,29 @@ def init_db():
                 email TEXT NOT NULL,
                 message TEXT NOT NULL
             )
-        ''')    
+        ''') 
+        # delivery agent dashboard
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS DeliveryAgentPerformance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_id INTEGER NOT NULL,
+            month TEXT NOT NULL,
+            year INTEGER NOT NULL,
+            orders_delivered INTEGER NOT NULL,
+            on_time_deliveries INTEGER NOT NULL,
+            customer_ratings REAL NOT NULL,
+            cancellation_rate REAL NOT NULL,
+            FOREIGN KEY (agent_id) REFERENCES Delivery_Agent (id)
+        )
+    ''')
+           
         conn.commit()
     except sqlite3.OperationalError as e:
         print(f"Error initialising database: {e}")
     finally:
         conn.close() #Always close the connection
 init_db()
+
 
 # Flask-Mail configuration
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -99,42 +130,54 @@ def start():
 #     else:
 #         return jsonify({'success': False, 'message': 'Error sending OTP.'})
 
-@app.route('/',methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        role = request.form['role']
+
+        if not role or not username or not password:
+            flash('Please provide all required fields (username, password, role).', 'danger')
+            return redirect(url_for('login'))
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM users WHERE username = ? AND password = ?
-            """, (username, password))
-            user = cursor.fetchone()
-            is_agent=False
-            if not user:
-                #check in delivery table if not found in users table
-                cursor.execute(""" SELECT * FROM Delivery_Agent WHERE username = ? AND password = ?""",(username,password))
-                user=cursor.fetchone()
-                is_agent=True if user else False
-                
+
+            # Querying based on role
+            if role == 'deliveryagent':
+                cursor.execute("""
+                    SELECT * FROM Delivery_Agent WHERE username = ? AND password = ?
+                """, (username, password))
+                user = cursor.fetchone()
+
+            elif role == 'customer':
+                cursor.execute("""
+                    SELECT * FROM users WHERE username = ? AND password = ?
+                """, (username, password))
+                user = cursor.fetchone()
+
+            elif role == 'admin':
+                flash('Login successful! Welcome back, Admin.', 'success')
+                return redirect(url_for('admin'))  # Redirect to Admin dashboard
             
+            else:
+                flash('Invalid role selected. Please choose a valid role.', 'danger')
             if user:
-                #extract user details and set session variables
+                # Extract user details and set session variables
                 session['user_id'] = user[0]
                 session['username'] = user[1]
                 session['email'] = user[2]
-                session['role'] = user[4] if not is_agent else 'Delivery Agent'
+                session['role'] = user[4]  # Role is assumed to be at index 4 for both tables
                 session['location'] = user[5] if len(user) > 5 else 'Not Provided'
                 session['contact'] = user[6] if len(user) > 6 else 'Not Provided'
-                
-                if session['role'].lower() == 'admin' and password == "123456":
-                    flash('Login successful! Welcome back, Admin.', 'success')
-                    return redirect(url_for('admin'))  # Redirect to Admin dashboard
-                elif is_agent:
+
+                if session['role'].lower() == 'deliveryagent':
                     flash('Login successful! Welcome back, Delivery Agent.', 'success')
                     return redirect(url_for('delivery'))  # Redirect to Delivery Agent dashboard
-                else:
+                
+                elif session['role'].lower() == 'customer':
+                    print('new customer')
                     flash('Login successful! Welcome back, Customer.', 'success')
                     return redirect(url_for('start'))  # Redirect to Customer dashboard
             else:
@@ -142,10 +185,91 @@ def login():
 
     return render_template('login.html')
 
+
+
 def get_db_connection():
-    conn = sqlite3.connect('database.db', timeout=30)  # Timeout to avoid lock
+    conn = sqlite3.connect('HifiEats.db', timeout=30)  # Timeout to avoid lock
     conn.row_factory = sqlite3.Row
     return conn
+
+
+@app.route('/performance')
+def performance():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))  # Redirect if not logged in
+
+    agent_id = session['user_id']
+    print(agent_id)
+
+    # Ensure get_db_connection() works and returns a valid connection
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM DeliveryAgentPerformance
+            WHERE agent_id = ? 
+            ORDER BY year DESC, month DESC
+        """, (agent_id,))
+
+        performance_data = cursor.fetchall()
+        month = []
+        orders_delivered = []
+        on_time_deliveries = []
+        customer_ratings = []
+        cancellation_rate = []
+
+        print(performance_data)
+        for i in performance_data:
+            print(i[2], i[4], i[5], i[6], i[7])  # Adjust indices based on your data
+            month.append(i[2])
+            orders_delivered.append(i[4])
+            on_time_deliveries.append(i[5])
+            customer_ratings.append(i[6])
+            cancellation_rate.append(i[7])
+
+        # Correct month order for sorting
+        months_order = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December']
+        
+        # Sort by month names (mapping months to their respective index)
+        month_data = sorted(zip(month, orders_delivered, on_time_deliveries, customer_ratings, cancellation_rate),
+                            key=lambda x: months_order.index(x[0]))
+        sorted_months, sorted_orders, sorted_on_time, sorted_ratings, sorted_cancellations = zip(*month_data)
+
+        performance_table_data = [
+            {"month": month, "orders": orders, "on_time": on_time, "ratings": ratings, "cancellations": cancellations}
+            for month, orders, on_time, ratings, cancellations in zip(sorted_months, sorted_orders, sorted_on_time, sorted_ratings, sorted_cancellations)
+        ]
+        
+        # Bar Chart
+        bar_chart_filename = f"performance_bar_chart_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+        bar_chart_path = os.path.join(app.config['IMAGE_FOLDER'], bar_chart_filename)
+        plt.figure(figsize=(10, 6))
+        plt.bar(sorted_months, sorted_orders, color='skyblue')
+        plt.xlabel('Month', fontsize=12)
+        plt.ylabel('Deliveries', fontsize=12)
+        plt.title('Monthly Deliveries Performance (Bar Chart)', fontsize=14)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(bar_chart_path)
+        plt.close()
+
+        # Line Chart
+        line_chart_filename = f"performance_line_chart_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+        line_chart_path = os.path.join(app.config['IMAGE_FOLDER'], line_chart_filename)
+        plt.figure(figsize=(10, 6))
+        plt.plot(sorted_months, sorted_orders, marker='o', color='skyblue', label='Orders Delivered')
+        plt.xlabel('Month', fontsize=12)
+        plt.ylabel('Deliveries', fontsize=12)
+        plt.title('Monthly Deliveries Performance (Line Chart)', fontsize=14)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(line_chart_path)
+        plt.close()
+
+        # Render the template with both charts' filenames
+        return render_template('sample.html', bar_chart_filename=bar_chart_filename,
+                               line_chart_filename=line_chart_filename,
+                               performance_table_data=performance_table_data)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -216,7 +340,7 @@ def contact():
         print(name)
         try:
             # Connect to the database
-            with sqlite3.connect('database.db') as conn:
+            with sqlite3.connect('HifiEats.db') as conn:
                 cursor = conn.cursor()
                 # Perform a case-insensitive check using COLLATE NOCASE
                 cursor.execute('select * from users where email = ?',(email,))
@@ -254,7 +378,7 @@ def recovery():
         email = request.form['email']
         
         # Connect to the database to check if the email exists
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('HifiEats.db')
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE email=?", (email,))
         user = cursor.fetchone()
@@ -295,7 +419,7 @@ def forgot_password():
         # Hash the new password before storing it (optional but recommended for security)
         hashed_password = new_password  # Replace with hash function if needed
 
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('HifiEats.db')
         cursor = conn.cursor()
         
         try:
@@ -356,7 +480,7 @@ def update_details():
         new_location = request.form['location']
         new_contact = request.form['contact']
 
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('HifiEats.db')
         cursor = conn.cursor()
         try:
             cursor.execute('''
@@ -381,7 +505,7 @@ def update_details():
             conn.close()
 
     # Fetch current user details for the form
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('HifiEats.db')
     cursor = conn.cursor()
     cursor.execute('SELECT username, email, role, location, contact FROM users WHERE id = ?', (user_id,))
     user_details = cursor.fetchone()
@@ -438,7 +562,7 @@ def admin_approvals():
         flash('Access restricted to administrators.', 'danger')
         return redirect(url_for('login'))
 
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('HifiEats.db')
     cursor = conn.cursor()
     cursor.execute('SELECT id, username, email, role, contact FROM users WHERE approved = 0')
     pending_users = cursor.fetchall()
@@ -453,7 +577,7 @@ def approve_user(user_id):
         return redirect(url_for('login'))
 
     action = request.form['action']  # 'approve' or 'reject'
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('HifiEats.db')
     cursor = conn.cursor()
     if action == 'approve':
         cursor.execute('UPDATE users SET approved = 1 WHERE id = ?', (user_id,))
@@ -492,45 +616,23 @@ def submit_agent_issue():
             return redirect(url_for('delivery_issue'))
     
 
-# Function to fetch all users
-def get_all_users():
-    conn = sqlite3.connect("database.db", timeout=30)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users")
-    users = cursor.fetchall()  # Fetch all rows
-    conn.close()
-    return users
-
-# Function to fetch all delivery agents
-def get_all_delivery_agents():
-    conn = sqlite3.connect("database.db", timeout=30)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Delivery_Agent")
-    agents = cursor.fetchall()  # Fetch all rows
-    conn.close()
-    return agents
-@app.route('/manageuser')
-def view_users_agents():
-    # Fetch users and delivery agents
-    users = get_all_users()
-    agents = get_all_delivery_agents()
-
-    # Pass the data to the template
-    return render_template('manageuser.html', users=users, agents=agents)
-
-@app.route('/agent_issues', methods=['GET'])
-def agent_issues():
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM Delivery_Agent_Report")  # Adjust as per your schema
-            reports = cursor.fetchall()  # Fetch all records
-        return render_template('agent_issues.html', reports=reports)
-    except sqlite3.OperationalError:
-        flash('Database is currently locked. Please try again later.', 'danger')
-        return redirect(url_for('delivery'))
-
 
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
