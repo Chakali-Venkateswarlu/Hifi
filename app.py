@@ -39,7 +39,6 @@ def init_db():
                 role TEXT NOT NULL,
                 location TEXT,
                 contact TEXT,
-                approved INTEGER NOT NULL DEFAULT 0  -- 0 = pending, 1 = approved, -1 = rejected
             )
         """)
         #Delivery Agent Table
@@ -685,6 +684,26 @@ def get_all_users():
     conn.close()
     return users
 
+@app.route('/delete_user', methods=['POST'])
+def delete_user():
+    user_id = request.form.get('delete_user')  # Get user ID from the button value
+
+    if user_id:
+        try:
+            conn = sqlite3.connect("HifiEats.db", timeout=30)
+            cursor = conn.cursor()
+            # Delete the user from the database
+            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            conn.commit()
+            conn.close()
+            flash("User deleted successfully!", "success")
+        except Exception as e:
+            flash(f"Error deleting user: {str(e)}", "danger")
+    else:
+        flash("Invalid user ID. Unable to delete user.", "warning")
+
+    return redirect('/manageuser')  # Redirect back to the management page
+
 # Function to fetch all delivery agents
 def get_all_delivery_agents():
     conn = sqlite3.connect("HifiEats.db", timeout=30)
@@ -702,6 +721,39 @@ def view_users_agents():
 
     # Pass the data to the template
     return render_template('manageuser.html', users=users, agents=agents)
+
+
+
+
+@app.route('/update_agent_status', methods=['POST'])
+def update_agent_status():
+    agent_id = request.form.get('update_agent')  # Get agent ID from button
+    new_status = request.form.get(f'status_{agent_id}')  # Get status for the agent
+
+    # Debugging print statements (remove in production)
+    print(f"Agent ID: {agent_id}")
+    print(f"New Status: {new_status}")
+
+    if agent_id and new_status is not None:
+        try:
+            conn = sqlite3.connect("HifiEats.db", timeout=30)
+            cursor = conn.cursor()
+            # Update the agent's status
+            cursor.execute("""
+                UPDATE Delivery_Agent
+                SET approved = ?
+                WHERE id = ?
+            """, (new_status, agent_id))
+            conn.commit()
+            conn.close()
+            flash("Delivery agent status updated successfully!", "success")
+        except Exception as e:
+            print(f"Error: {e}")  # Debugging
+            flash(f"Error updating delivery agent status: {str(e)}", "danger")
+    else:
+        flash("Invalid input. Unable to update delivery agent status.", "warning")
+
+    return redirect('/manageuser')  # Redirect back to the management page
 
 @app.route('/agent_issues', methods=['GET'])
 def agent_issues():
