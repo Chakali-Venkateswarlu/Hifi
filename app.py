@@ -48,7 +48,27 @@ def init_db():
                 email TEXT NOT NULL,
                 message TEXT NOT NULL
             )
-        ''')    
+        ''')   
+        #new order table for fk orderId
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Orders (
+                orderId INTEGER PRIMARY KEY AUTOINCREMENT,
+                customerName TEXT NOT NULL,
+                productName TEXT NOT NULL,
+                orderDate TEXT NOT NULL
+            )
+        """) 
+        # Delivery_Agent_Report Table with Foreign Key to Orders (new specification)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Delivery_Agent_Report (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Agent TEXT NOT NULL,
+                OrderId INTEGER,
+                IssueType TEXT NOT NULL,
+                IssueDetails TEXT NOT NULL,
+                FOREIGN KEY (OrderId) REFERENCES Orders (orderId) ON DELETE CASCADE
+            )
+        """)
         conn.commit()
     except sqlite3.OperationalError as e:
         print(f"Error initialising database: {e}")
