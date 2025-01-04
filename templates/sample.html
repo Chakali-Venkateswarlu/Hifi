@@ -70,10 +70,18 @@
     </table>
 
     <h3>Bar Chart</h3>
+{% if bar_chart_filename %}
 <img src="{{ url_for('static', filename='images/' + bar_chart_filename) }}" alt="Bar Chart">
+{% else %}
+<p>Bar chart is not available.</p>
+{% endif %}
 
-<!-- Display the Line Chart -->
 <h3>Line Chart</h3>
+{% if line_chart_filename %}
 <img src="{{ url_for('static', filename='images/' + line_chart_filename) }}" alt="Line Chart">
+{% else %}
+<p>Line chart is not available.</p>
+{% endif %}
+
 </body>
 </html>

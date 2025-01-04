@@ -64,6 +64,7 @@ def init_db():
                 message TEXT NOT NULL
             )
         ''') 
+    
         # delivery agent dashboard
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS DeliveryAgentPerformance (
@@ -78,6 +79,27 @@ def init_db():
             FOREIGN KEY (agent_id) REFERENCES Delivery_Agent (id)
         )
     ''')
+        
+        #new order table for fk orderId
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Orders (
+                orderId INTEGER PRIMARY KEY AUTOINCREMENT,
+                customerName TEXT NOT NULL,
+                productName TEXT NOT NULL,
+                orderDate TEXT NOT NULL
+            )
+        """) 
+        # Delivery_Agent_Report Table with Foreign Key to Orders (new specification)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Delivery_Agent_Report (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Agent TEXT NOT NULL,
+                OrderId INTEGER,
+                IssueType TEXT NOT NULL,
+                IssueDetails TEXT NOT NULL,
+                FOREIGN KEY (OrderId) REFERENCES Orders (orderId) ON DELETE CASCADE
+            )
+        """)
            
         conn.commit()
     except sqlite3.OperationalError as e:
@@ -136,6 +158,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
         role = request.form['role']
+        user = ''
 
         if not role or not username or not password:
             flash('Please provide all required fields (username, password, role).', 'danger')
@@ -157,7 +180,7 @@ def login():
                 """, (username, password))
                 user = cursor.fetchone()
 
-            elif role == 'admin':
+            elif role == 'admin' and username == 'admin' and password == '123':
                 flash('Login successful! Welcome back, Admin.', 'success')
                 return redirect(url_for('admin'))  # Redirect to Admin dashboard
             
@@ -177,7 +200,7 @@ def login():
                     return redirect(url_for('delivery'))  # Redirect to Delivery Agent dashboard
                 
                 elif session['role'].lower() == 'customer':
-                    print('new customer')
+
                     flash('Login successful! Welcome back, Customer.', 'success')
                     return redirect(url_for('start'))  # Redirect to Customer dashboard
             else:
@@ -218,6 +241,10 @@ def performance():
         cancellation_rate = []
 
         print(performance_data)
+        if not performance_data:
+            return render_template('sample.html', bar_chart_filename=None,
+                                line_chart_filename=None,
+                                performance_table_data=[])
         for i in performance_data:
             print(i[2], i[4], i[5], i[6], i[7])  # Adjust indices based on your data
             month.append(i[2])
@@ -225,6 +252,11 @@ def performance():
             on_time_deliveries.append(i[5])
             customer_ratings.append(i[6])
             cancellation_rate.append(i[7])
+
+        if not month or not orders_delivered or not on_time_deliveries or not customer_ratings or not cancellation_rate:
+            return render_template('sample.html', bar_chart_filename=None,
+                                line_chart_filename=None,
+                                performance_table_data=[])
 
         # Correct month order for sorting
         months_order = ['January', 'February', 'March', 'April', 'May', 'June', 
@@ -483,11 +515,38 @@ def update_details():
         conn = sqlite3.connect('HifiEats.db')
         cursor = conn.cursor()
         try:
-            cursor.execute('''
-                UPDATE users
-                SET username = ?, email = ?, role = ?, location = ?, contact = ?
-                WHERE id = ?
-            ''', (new_username, new_email, new_role, new_location, new_contact, user_id))
+            # Fetch the current role
+            cursor.execute('SELECT role FROM users WHERE id = ?', (user_id,))
+            current_role = cursor.fetchone()[0]
+
+            if current_role == new_role:
+                # If the role hasn't changed, update the existing record in the `users` table
+                cursor.execute('''
+                    UPDATE users
+                    SET username = ?, email = ?, role = ?, location = ?, contact = ?
+                    WHERE id = ?
+                ''', (new_username, new_email, new_role, new_location, new_contact, user_id))
+            else:
+                # If the role has changed, move the details to the appropriate table
+                if current_role == 'customer':
+                    # Move the user details to the `delivery` table
+                    cursor.execute('''
+                        INSERT INTO Delivery_Agent (id, username, email, role, location, contact)
+                        SELECT id, username, email, ?, ?, ? FROM users WHERE id = ?
+                    ''', (new_role, new_location, new_contact, user_id))
+                else:
+                    # Move the delivery details to the `users` table
+                    cursor.execute('''
+                        INSERT INTO users (id, username, email, role, location, contact)
+                        SELECT id, username, email, ?, ?, ? FROM Delivery_Agent WHERE id = ?
+                    ''', (new_role, new_location, new_contact, user_id))
+
+                # Remove the old record from the previous table
+                if current_role == 'user':
+                    cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+                else:
+                    cursor.execute('DELETE FROM delivery WHERE id = ?', (user_id,))
+
             conn.commit()
             flash('Details updated successfully!', 'success')
 
@@ -616,6 +675,45 @@ def submit_agent_issue():
             return redirect(url_for('delivery_issue'))
     
 
+
+# Function to fetch all users
+def get_all_users():
+    conn = sqlite3.connect("HifiEats.db", timeout=30)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users")
+    users = cursor.fetchall()  # Fetch all rows
+    conn.close()
+    return users
+
+# Function to fetch all delivery agents
+def get_all_delivery_agents():
+    conn = sqlite3.connect("HifiEats.db", timeout=30)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Delivery_Agent")
+    agents = cursor.fetchall()  # Fetch all rows
+    conn.close()
+    return agents
+
+@app.route('/manageuser')
+def view_users_agents():
+    # Fetch users and delivery agents
+    users = get_all_users()
+    agents = get_all_delivery_agents()
+
+    # Pass the data to the template
+    return render_template('manageuser.html', users=users, agents=agents)
+
+@app.route('/agent_issues', methods=['GET'])
+def agent_issues():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM Delivery_Agent_Report")  # Adjust as per your schema
+            reports = cursor.fetchall()  # Fetch all records
+        return render_template('agent_issues.html', reports=reports)
+    except sqlite3.OperationalError:
+        flash('Database is currently locked. Please try again later.', 'danger')
+        return redirect(url_for('delivery'))
 
 
 if __name__ == '__main__':
