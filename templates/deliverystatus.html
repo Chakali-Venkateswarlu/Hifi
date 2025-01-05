@@ -157,6 +157,9 @@
   <main>
     <section class="orders">
       <h2>Assigned Orders</h2>
+
+      <!-- Filter Section -->
+      
       <table>
         <thead>
           <tr>
@@ -164,13 +167,31 @@
             <th>Customer Name</th>
             <th>Phone</th>
             <th>Address</th>
-            <th>Delivery Instructions</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
-        <tbody id="orderTable">
-          <!-- Orders will be dynamically added here -->
+        <tbody>
+          {% if orders %}
+            {% for order in orders %}
+              <tr>
+                <td>{{ order[0] }}</td> <!-- Order ID -->
+                <td>{{ order[1] }}</td> <!-- Customer Name -->
+                <td>{{ order[2] }}</td> <!-- Phone -->
+                <td>{{ order[3] }}</td> <!-- Address -->
+                <td>
+                  <span class="status-badge {% if order[5] == 'Pending' %}status-pending{% elif order[5] == 'Picked Up' %}status-picked-up{% else %}status-delivered{% endif %}">
+                    {{ order[4] }}
+                  </span>
+                </td>
+                <!-- <td>
+                  <button onclick="updateStatus({{ order[0] | tojson }})">Update Status</button>
+                </td> -->
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="6">No orders to display.</td></tr>
+          {% endif %}
         </tbody>
       </table>
     </section>
@@ -178,68 +199,12 @@
   <footer>
     <p>© 2024 HiFiDelivery | Powered by Swiggy Colors</p>
   </footer>
+
   <script>
-    // Mock Data
-    const orders = [
-      { id: 201, name: "Alice Johnson", phone: "123-456-7890", address: "123 Maple St", deliveryInstruction: "Leave at the front door.", status: "Pending" },
-      { id: 202, name: "Bob Smith", phone: "987-654-3210", address: "456 Oak Ave", deliveryInstruction: "Call me upon arrival.", status: "Picked Up" },
-      { id: 203, name: "Charlie Brown", phone: "555-678-1234", address: "789 Pine Rd", deliveryInstruction: "Ring the bell twice.", status: "Delivered" },
-    ];
-
-    // Function to render orders in the table
-    function renderOrders() {
-      const orderTable = document.getElementById("orderTable");
-      orderTable.innerHTML = ""; // Clear the table
-
-      orders.forEach((order, index) => {
-        const row = document.createElement("tr");
-        const statusClass = getStatusClass(order.status);
-
-        row.innerHTML = `
-          <td>${order.id}</td>
-          <td>${order.name}</td>
-          <td>${order.phone}</td>
-          <td>${order.address}</td>
-          <td>${order.deliveryInstruction}</td>
-          <td>
-            <span class="status-badge ${statusClass}">${order.status}</span>
-          </td>
-          <td>
-            <button onclick="updateStatus(${index})">Update Status</button>
-          </td>
-        `;
-        orderTable.appendChild(row);
-      });
+    // Mock updateStatus function for frontend behavior (to be connected with Flask backend in future)
+    function updateStatus(orderId) {
+      alert('You are updating status for Order ID: ' + orderId);
     }
-
-    // Function to map status to badge classes
-    function getStatusClass(status) {
-      switch (status.toLowerCase()) {
-        case "pending":
-          return "status-pending";
-        case "picked up":
-          return "status-picked-up";
-        case "delivered":
-          return "status-delivered";
-        default:
-          return "";
-      }
-    }
-
-    // Function to update the status of an order
-    function updateStatus(orderIndex) {
-      const newStatus = prompt(
-        `Update status for Order ID ${orders[orderIndex].id} (current: ${orders[orderIndex].status})`,
-        "Delivered"
-      );
-      if (newStatus) {
-        orders[orderIndex].status = newStatus;
-        renderOrders();
-      }
-    }
-
-    // Initial render
-    renderOrders();
   </script>
 </body>
 </html>

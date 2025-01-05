@@ -10,6 +10,12 @@ from datetime import datetime
 import os
 
 
+'''
+reject = -1
+approve = 1
+pending = 0
+'''
+
 
 app = Flask(__name__)
 
@@ -100,6 +106,21 @@ def init_db():
                 FOREIGN KEY (OrderId) REFERENCES Orders (orderId) ON DELETE CASCADE
             )
         """)
+
+        # assignedOrders table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS assignedOrders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            orderId INTEGER NOT NULL,
+            customerName TEXT NOT NULL,
+            deliveryAgentId INTEGER NOT NULL,
+            status TEXT CHECK(status IN ('New', 'In Progress', 'Completed')) NOT NULL,
+            action TEXT NOT NULL,
+            FOREIGN KEY (orderId) REFERENCES Orders (orderId) ON DELETE CASCADE,
+            FOREIGN KEY (customerName) REFERENCES users (username),
+            FOREIGN KEY (deliveryAgentId) REFERENCES Delivery_Agent (id)
+        )
+    """)
            
         conn.commit()
     except sqlite3.OperationalError as e:
@@ -115,6 +136,8 @@ app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_SSL'] = True
 app.config['MAIL_USERNAME'] = 'hifidelivery213@gmail.com'  # Replace with your email
 app.config['MAIL_PASSWORD'] = 'oiya zlhv irvc yowz'  # Replace with your app-specific password
+
+import sqlite3
 
 mail = Mail(app)
 # Store OTPs in memory (can be changed to a database in production)
@@ -195,7 +218,7 @@ def login():
                 session['location'] = user[5] if len(user) > 5 else 'Not Provided'
                 session['contact'] = user[6] if len(user) > 6 else 'Not Provided'
 
-                if session['role'].lower() == 'deliveryagent':
+                if session['role'].lower() == 'deliveryagent' :
                     flash('Login successful! Welcome back, Delivery Agent.', 'success')
                     return redirect(url_for('delivery'))  # Redirect to Delivery Agent dashboard
                 
@@ -676,7 +699,75 @@ def submit_agent_issue():
     
 
 
-# Function to fetch all users
+
+
+@app.route('/agent_issues', methods=['GET'])
+def agent_issues():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM Delivery_Agent_Report")  # Adjust as per your schema
+            reports = cursor.fetchall()  # Fetch all records
+        return render_template('agent_issues.html', reports=reports)
+    except sqlite3.OperationalError:
+        flash('Database is currently locked. Please try again later.', 'danger')
+        return redirect(url_for('delivery'))
+
+# Function to get assigned orders for the delivery agent
+def get_assigned_orders(delivery_agent_id):
+    try:
+        conn = sqlite3.connect("HifiEats.db", timeout=30)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT o.orderId, o.customerName, u.contact AS phone, u.location AS address, a.status, a.action, a.deliveryAgentId
+            FROM Orders o
+            JOIN assignedOrders a ON o.orderId = a.orderId
+            JOIN users u ON a.customerName = u.username
+            WHERE a.deliveryAgentId = ?;
+        """, (delivery_agent_id,))
+        orders = cursor.fetchall()
+        conn.close()
+        print(orders)  # Debugging purpose
+        return orders
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return []
+
+@app.route('/view_orders')
+def view_orders():
+    
+    delivery_agent_id = session['user_id']
+    if not delivery_agent_id:
+        return "Error: Delivery Agent ID is required", 400
+
+    # Fetch orders assigned to the logged-in delivery agent
+    orders = get_assigned_orders(delivery_agent_id)
+    if not orders:
+        return "No orders found", 404
+    
+    return render_template('deliverystatus.html', orders=orders)
+
+
+def get_orders_by_status(status=None):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    
+    # If status is provided, filter by status, otherwise fetch all orders
+    if status:
+        cursor.execute("SELECT * FROM assignedOrders WHERE status=?", (status,))
+    else:
+        cursor.execute("SELECT * FROM assignedOrders")
+    
+    orders = cursor.fetchall()
+    conn.close()
+    return orders
+
+@app.route('/status_of_order')
+def status():
+    status_filter = request.args.get('status')  # Get the status filter from query params
+    orders = get_orders_by_status(status_filter)  # Fetch orders based on status
+    return render_template('deliverystatus.html', orders=orders)
+
 def get_all_users():
     conn = sqlite3.connect("HifiEats.db", timeout=30)
     cursor = conn.cursor()
@@ -684,6 +775,26 @@ def get_all_users():
     users = cursor.fetchall()  # Fetch all rows
     conn.close()
     return users
+
+@app.route('/delete_user', methods=['POST'])
+def delete_user():
+    user_id = request.form.get('delete_user')  # Get user ID from the button value
+
+    if user_id:
+        try:
+            conn = sqlite3.connect("HifiEats.db", timeout=30)
+            cursor = conn.cursor()
+            # Delete the user from the database
+            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            conn.commit()
+            conn.close()
+            flash("User deleted successfully!", "success")
+        except Exception as e:
+            flash(f"Error deleting user: {str(e)}", "danger")
+    else:
+        flash("Invalid user ID. Unable to delete user.", "warning")
+
+    return redirect('/manageuser')  # Redirect back to the management page
 
 # Function to fetch all delivery agents
 def get_all_delivery_agents():
@@ -703,17 +814,38 @@ def view_users_agents():
     # Pass the data to the template
     return render_template('manageuser.html', users=users, agents=agents)
 
-@app.route('/agent_issues', methods=['GET'])
-def agent_issues():
-    try:
-        with get_db_connection() as conn:
+
+
+
+@app.route('/update_agent_status', methods=['POST'])
+def update_agent_status():
+    agent_id = request.form.get('update_agent')  # Get agent ID from button
+    new_status = request.form.get(f'status_{agent_id}')  # Get status for the agent
+
+    # Debugging print statements (remove in production)
+    print(f"Agent ID: {agent_id}")
+    print(f"New Status: {new_status}")
+
+    if agent_id and new_status is not None:
+        try:
+            conn = sqlite3.connect("HifiEats.db", timeout=30)
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM Delivery_Agent_Report")  # Adjust as per your schema
-            reports = cursor.fetchall()  # Fetch all records
-        return render_template('agent_issues.html', reports=reports)
-    except sqlite3.OperationalError:
-        flash('Database is currently locked. Please try again later.', 'danger')
-        return redirect(url_for('delivery'))
+            # Update the agent's status
+            cursor.execute("""
+                UPDATE Delivery_Agent
+                SET approved = ?
+                WHERE id = ?
+            """, (new_status, agent_id))
+            conn.commit()
+            conn.close()
+            flash("Delivery agent status updated successfully!", "success")
+        except Exception as e:
+            print(f"Error: {e}")  # Debugging
+            flash(f"Error updating delivery agent status: {str(e)}", "danger")
+    else:
+        flash("Invalid input. Unable to update delivery agent status.", "warning")
+
+    return redirect('/manageuser')  # Redirect back to the management page
 
 
 if __name__ == '__main__':
