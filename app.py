@@ -217,10 +217,18 @@ def login():
                 session['role'] = user[4]  # Role is assumed to be at index 4 for both tables
                 session['location'] = user[5] if len(user) > 5 else 'Not Provided'
                 session['contact'] = user[6] if len(user) > 6 else 'Not Provided'
+                session['approved'] = user[7]
 
                 if session['role'].lower() == 'deliveryagent' :
-                    flash('Login successful! Welcome back, Delivery Agent.', 'success')
-                    return redirect(url_for('delivery'))  # Redirect to Delivery Agent dashboard
+                    if session['approved'] == 1:
+                        flash('Login successful! Welcome back, Delivery Agent.', 'success')
+                        return redirect(url_for('delivery'))  # Redirect to Delivery Agent dashboard
+                    elif session['approved'] == 0:
+                        flash("Dear Delivery Agent ,Your approved status is still Pending",'danger')
+                    else:
+                        flash("Dear Delivery Agent, Your are Rejected by Admin",'danger')
+
+                    return redirect(url_for('login'))  # Redirect to Delivery Agent dashboard
                 
                 elif session['role'].lower() == 'customer':
 
@@ -385,6 +393,10 @@ def register():
 @app.route('/info')
 def info():
     return render_template('info.html')
+
+@app.route('/save_multiple_address')
+def save_multiple_address():
+    return render_template('savemultipleaddress.html')
 
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
@@ -748,25 +760,52 @@ def view_orders():
     return render_template('deliverystatus.html', orders=orders)
 
 
-def get_orders_by_status(status=None):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    
-    # If status is provided, filter by status, otherwise fetch all orders
-    if status:
-        cursor.execute("SELECT * FROM assignedOrders WHERE status=?", (status,))
-    else:
-        cursor.execute("SELECT * FROM assignedOrders")
-    
-    orders = cursor.fetchall()
-    conn.close()
-    return orders
 
-@app.route('/status_of_order')
+# Utility function to fetch orders by status
+def get_orders_by_status(agent_id,status=None):
+    try:
+        conn = sqlite3.connect('HifiEats.db')
+        cursor = conn.cursor()
+        
+        # Fetch orders based on delivery agent ID and status
+        if status:
+            cursor.execute("""
+            SELECT o.orderId, o.customerName, u.contact AS phone, u.location AS address, a.status, a.action, a.deliveryAgentId
+            FROM Orders o
+            JOIN assignedOrders a ON o.orderId = a.orderId
+            JOIN users u ON a.customerName = u.username
+            WHERE a.deliveryAgentId = ? and a.status = ?;
+        """, (agent_id,status))
+        else:
+            cursor.execute("""
+            SELECT o.orderId, o.customerName, u.contact AS phone, u.location AS address, a.status, a.action, a.deliveryAgentId
+            FROM Orders o
+            JOIN assignedOrders a ON o.orderId = a.orderId
+            JOIN users u ON a.customerName = u.username
+            WHERE a.deliveryAgentId = ?;
+        """, (agent_id,))
+        
+        orders = cursor.fetchall()
+        return orders
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Route to filter orders based on their status
+@app.route('/status_of_order', methods=['GET'])
 def status():
-    status_filter = request.args.get('status')  # Get the status filter from query params
-    orders = get_orders_by_status(status_filter)  # Fetch orders based on status
+    delivery_agent_id = session['user_id']
+    status_filter = request.args.get('status')  # Get the 'status' parameter from the request
+    orders = get_orders_by_status(delivery_agent_id,status_filter)  # Fetch orders from the database
+    
+    if not orders:
+        flash("No orders found for the given status.", "info")  # Display a flash message for no results
+        orders = []  # Pass an empty list to avoid rendering issues
+    
     return render_template('deliverystatus.html', orders=orders)
+
 
 def get_all_users():
     conn = sqlite3.connect("HifiEats.db", timeout=30)
