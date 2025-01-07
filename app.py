@@ -15,7 +15,7 @@ reject = -1
 approve = 1
 pending = 0
 '''
-
+print('hello')
 
 app = Flask(__name__)
 
