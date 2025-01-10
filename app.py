@@ -10,6 +10,12 @@ from datetime import datetime
 import os
 
 
+'''
+reject = -1
+approve = 1
+pending = 0
+'''
+
 
 app = Flask(__name__)
 
