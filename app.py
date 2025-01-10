@@ -10,12 +10,6 @@ from datetime import datetime
 import os
 
 
-'''
-reject = -1
-approve = 1
-pending = 0
-'''
-
 
 app = Flask(__name__)
 
@@ -85,6 +79,37 @@ def init_db():
             FOREIGN KEY (agent_id) REFERENCES Delivery_Agent (id)
         )
     ''')
+
+        #orderFeedbackTable
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS OrderFeedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            orderId INTEGER NOT NULL,
+            customerId INTEGER NOT NULL,
+            rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+            review TEXT,
+            feedbackMessage TEXT,
+            feedbackDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (orderId) REFERENCES Orders (orderId) ON DELETE CASCADE,
+            FOREIGN KEY (customerId) REFERENCES users (id) ON DELETE CASCADE
+        )
+    """)
+        
+        # DeliveryData Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS DeliveryData (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,          -- Unique identifier for each record
+            orderId INTEGER NOT NULL,                      -- Foreign key to the Orders table
+            deliveryAgentId INTEGER NOT NULL,              -- Foreign key to the Delivery_Agent table
+            pickupTime TIMESTAMP NOT NULL,                 -- Timestamp when the order is picked up
+            deliveryTime TIMESTAMP,                        -- Timestamp when the order is delivered
+            scheduledDeliveryTime TIMESTAMP NOT NULL,      -- Scheduled delivery time for KPI calculation
+            status TEXT CHECK(status IN ('Pending', 'In Transit', 'Delivered', 'Cancelled')) NOT NULL, -- Delivery status
+            lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Last update time
+            FOREIGN KEY (orderId) REFERENCES Orders (orderId) ON DELETE CASCADE, -- Valid orders
+            FOREIGN KEY (deliveryAgentId) REFERENCES Delivery_Agent (id) ON DELETE CASCADE -- Valid delivery agent
+        )
+    """)
         
         #new order table for fk orderId
         cursor.execute("""
