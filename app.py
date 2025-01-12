@@ -399,6 +399,18 @@ def register():
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 print("Connection opened successfully.")
+
+                # Check for duplicate email or contact in both tables
+                cursor.execute("""
+                    SELECT 1 FROM Delivery_Agent WHERE email = ? OR contact = ?
+                    UNION
+                    SELECT 1 FROM users WHERE email = ? OR contact = ?
+                """, (email, contact, email, contact))
+                if cursor.fetchone():
+                    flash('Email or mobile number already exists. Please use a different one.', 'danger')
+                    return render_template('register.html')
+                
+
                 if role.lower() == "deliveryagent":
                     cursor.execute("""
                         INSERT INTO Delivery_Agent (username, password, email, role, location, contact)
