@@ -99,18 +99,13 @@
 
         h1 {
             font-family: 'Arial', sans-serif;
-            font-size: 36px;
+            font-size: 24px;
             font-weight: bold;
             color: #333;
             text-align: center;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            line-height: 1.5;
-            padding: 20px 0;
-            background-color: #f0f0f0;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin: 20px 0;
+            letter-spacing: 1px;
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -120,14 +115,15 @@
         <div class="logo">HIFI DELIVERY ADMIN</div>
         <nav>
             <ul>
-                <li><a href="admin"><i class="fa-solid fa-house"></i> Home</a></li>
+                <li><a href="/admin_page"><i class="fa-solid fa-house"></i> Home</a></li>
             </ul>
         </nav>
     </header>
 
     <main>
-        <div class="container">
-            <h1>Delivery Agent Report</h1>
+        <!-- Delivery Agent Issues Table -->
+        <section>
+            <h1>Delivery Agent Issues</h1>
             <table>
                 <thead>
                     <tr>
@@ -139,18 +135,43 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for report in reports %}
+                    {% for issue in agent_issues %}
                     <tr>
-                        <td>{{ report[0] }}</td> <!-- ID -->
-                        <td>{{ report[1] }}</td> <!-- Agent -->
-                        <td>{{ report[2] }}</td> <!-- OrderId -->
-                        <td>{{ report[3] }}</td> <!-- IssueType -->
-                        <td>{{ report[4] }}</td> <!-- IssueDetails -->
+                        <td>{{ issue[0] }}</td> <!-- ID -->
+                        <td>{{ issue[1] }}</td> <!-- Agent -->
+                        <td>{{ issue[2] }}</td> <!-- Order ID -->
+                        <td>{{ issue[3] }}</td> <!-- Issue Type -->
+                        <td>{{ issue[4] }}</td> <!-- Issue Details -->
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
+        </section>
+
+        <!-- Customer Feedback Table -->
+        <section>
+            <h1>Customer Feedback</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feedback in customer_feedback %}
+                    <tr>
+                        <td>{{ feedback[0] }}</td> <!-- ID -->
+                        <td>{{ feedback[1] }}</td> <!-- Name -->
+                        <td>{{ feedback[2] }}</td> <!-- Email -->
+                        <td>{{ feedback[3] }}</td> <!-- Message -->
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
     </main>
 
     <footer>
