@@ -152,6 +152,31 @@ def init_db():
             FOREIGN KEY (deliveryAgentId) REFERENCES Delivery_Agent (id)
         )
     """)
+        #Table for Order from Team -2 
+        cursor.execute('''CREATE TABLE IF NOT EXISTS 'Order' (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        items TEXT NOT NULL,
+                        location TEXT NOT NULL,
+                        total_price REAL NOT NULL,
+                        in_range TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'Order Placed',
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+
+        cursor.execute('''
+        CREATE TABLE if not exists "Menu_Item" (
+            "itemId"	INTEGER,
+            "item_name"	TEXT NOT NULL,
+            "description"	TEXT,
+            "price"	REAL NOT NULL,
+            "image_path"	TEXT,
+            "category"	TEXT DEFAULT 'veg',
+            "subcategory"	TEXT DEFAULT 'starter',
+            "discount"	REAL DEFAULT 0.0,
+            PRIMARY KEY("itemId" AUTOINCREMENT)
+        )
+
+''')
+        
            
         conn.commit()
     except sqlite3.OperationalError as e:
