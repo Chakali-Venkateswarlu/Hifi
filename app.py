@@ -761,9 +761,20 @@ def agent_issues():
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM Delivery_Agent_Report")  # Adjust as per your schema
-            reports = cursor.fetchall()  # Fetch all records
-        return render_template('agent_issues.html', reports=reports)
+
+            # Fetch data from Delivery_Agent_Report
+            cursor.execute('SELECT * FROM Delivery_Agent_Report')  
+            agent_issues = cursor.fetchall()
+
+            # Fetch data from contact_messages
+            cursor.execute('SELECT id, name, email, message FROM contact_messages')  
+            customer_feedback = cursor.fetchall()
+
+        # Pass both datasets to the template
+        return render_template('agent_issues.html', 
+                               agent_issues=agent_issues, 
+                               customer_feedback=customer_feedback)
+
     except sqlite3.OperationalError:
         flash('Database is currently locked. Please try again later.', 'danger')
         return redirect(url_for('delivery'))
