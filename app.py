@@ -965,6 +965,9 @@ def update_agent_status():
 
     return redirect('/manageuser')  # Redirect back to the management page
 
+@app.route('/items_analysis_admin')
+def items_analysis_admin():
+    return render_template('items_analysis.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
