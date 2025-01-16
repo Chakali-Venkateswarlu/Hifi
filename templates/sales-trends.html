@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Trends Dashboard</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f4f8;
+      text-align: center;
+      color: #333;
+      background-size: cover;
+      background-image: url(new.jpg);
+    }
+
+    .dashboard-container {
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: powderblue;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    h1 {
+      color: #4caf50;
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    .filter-section {
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    select {
+      padding: 10px 15px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    #sales-trend-chart {
+      margin-top: 30px;
+      position: relative;
+    }
+
+    canvas {
+      background-color:  palegoldenrod;
+      border: 1px solid blue;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    <h1>📊 Sales Trends Dashboard</h1>
+
+    <div class="filter-section">
+      <label for="food-item">Select Food Item:</label>
+      <select id="food-item">
+        <option value="burger">Burger</option>
+        <option value="pizza">Pizza</option>
+        <option value="pasta">Pasta</option>
+      </select>
+
+      <label for="date-range">Select Time Period:</label>
+      <select id="date-range">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+
+    <div id="sales-trend-chart">
+      <canvas id="salesChart" width="600" height="300"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const salesData = {
+      burger: {
+        daily: [100, 150, 200, 250, 300, 350, 400],
+        weekly: [700, 1200, 1500, 1800, 2000],
+        monthly: [4000, 4500, 5000, 6000, 7500],
+      },
+      pizza: {
+        daily: [120, 160, 220, 270, 330, 380, 420],
+        weekly: [800, 1300, 1600, 1900, 2100],
+        monthly: [4200, 4600, 5200, 6100, 7600],
+      },
+      pasta: {
+        daily: [80, 120, 170, 220, 280, 320, 370],
+        weekly: [600, 1100, 1400, 1600, 1900],
+        monthly: [3800, 4200, 4800, 5800, 7200],
+      },
+    };
+
+    function renderChart(data, labels) {
+      const canvas = document.getElementById('salesChart');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const maxY = Math.max(...data) + 100; 
+      const padding = 40;
+      const chartWidth = canvas.width - padding * 2;
+      const chartHeight = canvas.height - padding * 2;
+      const stepX = chartWidth / (data.length - 1);
+      const stepY = chartHeight / maxY;
+
+      ctx.font = '12px Arial';
+      ctx.fillStyle = '#333';
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= maxY; i += 500) {
+        const y = canvas.height - padding - i * stepY;
+        ctx.fillText(i, padding - 30, y + 5);
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(canvas.width - padding, y);
+        ctx.stroke();
+      }
+      labels.forEach((label, index) => {
+        const x = padding + index * stepX;
+        ctx.fillText(label, x - 10, canvas.height - padding + 20);
+      });
+      ctx.beginPath();
+      ctx.strokeStyle = '#4caf50';
+      ctx.lineWidth = 2;
+
+      data.forEach((point, index) => {
+        const x = padding + index * stepX;
+        const y = canvas.height - padding - point * stepY;
+        index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+
+      ctx.stroke();
+      ctx.fillStyle = '#4caf50';
+      data.forEach((point, index) => {
+        const x = padding + index * stepX;
+        const y = canvas.height - padding - point * stepY;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+    }
+    function updateChart() {
+      const foodItem = document.getElementById('food-item').value;
+      const timeRange = document.getElementById('date-range').value;
+
+      const timeLabels = {
+        daily: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        weekly: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
+        monthly: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+      };
+
+      renderChart(salesData[foodItem][timeRange], timeLabels[timeRange]);
+    }
+    document.getElementById('food-item').addEventListener('change', updateChart);
+    document.getElementById('date-range').addEventListener('change', updateChart);
+    updateChart();
+  </script>
+
+</body>
+</html>
