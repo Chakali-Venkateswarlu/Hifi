@@ -967,7 +967,28 @@ def update_agent_status():
 
 @app.route('/items_analysis_admin')
 def items_analysis_admin():
-    return render_template('items_analysis.html')
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Adjusted query to count orders
+            cursor.execute('''
+            SELECT mi.itemId, mi.item_name, mi.price, mi.category, mi.subcategory, mi.discount,
+            COUNT(o.orderId) AS times_ordered
+            FROM Menu_Item mi
+            LEFT JOIN Orders o ON mi.item_name = o.productName  -- Match items with orders
+            GROUP BY mi.itemId
+            ORDER BY times_ordered DESC;
+            ''')
+            items = cursor.fetchall()
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        items = []
+
+    return render_template('items_analysis.html', items=items)
+
+@app.route('/customer-rating')
+def customer_rating():
+    return render_template('customer-rating.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
