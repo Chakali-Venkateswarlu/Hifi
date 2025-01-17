@@ -988,7 +988,100 @@ def items_analysis_admin():
 
 @app.route('/customer-rating')
 def customer_rating():
-    return render_template('customer-rating.html')
+    # Check if the user is logged in
+    if 'username' not in session:
+        return redirect('/login')
+    
+    username = session['username']
+    conn = sqlite3.connect('HifiEats.db')
+    conn.row_factory = sqlite3.Row
+    try:
+        # Fetch completed orders for the logged-in customer
+        query = """
+            SELECT ao.orderId, o.productName, o.orderDate, mi.price
+            FROM assignedOrders ao
+            JOIN Orders o ON ao.orderId = o.orderId
+            JOIN Menu_Item mi ON o.productName = mi.item_name
+            WHERE ao.customerName = ? AND ao.status = 'Completed'
+        """
+        cursor = conn.execute(query, (username,))
+        orders = cursor.fetchall()
+
+        # Prepare data for the template
+        order_data = []
+        for order in orders:
+            # Fetch existing feedback for each order
+            feedback_query = """
+                SELECT rating, review FROM OrderFeedback 
+                WHERE orderId = ? AND customerId = (SELECT id FROM users WHERE username = ?)
+            """
+            feedback_cursor = conn.execute(feedback_query, (order['orderId'], username))
+            feedback = feedback_cursor.fetchone()
+            order_data.append({
+                'order_id': order['orderId'],
+                'product_name': order['productName'],
+                'order_date': order['orderDate'],
+                'price': order['price'],
+                'feedback': feedback  # Pass feedback to template
+            })
+    finally:
+        conn.close()  # Ensure the connection is closed
+
+    return render_template('customer-rating.html', orders=order_data)
+@app.route('/submit-feedback', methods=['POST'])
+def submit_feedback():
+    if 'username' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    username = session['username']
+    data = request.get_json()
+
+    # Extract feedback details from the request
+    order_id = data.get('order_id')
+    rating = data.get('rating')
+    review = data.get('review')
+
+    if not order_id or not rating or not review:
+        return jsonify({'error': 'Incomplete feedback data'}), 400
+
+    conn = sqlite3.connect('HifiEats.db')
+    try:
+        # Get the customer ID
+        cursor = conn.execute("SELECT id FROM users WHERE username = ?", (username,))
+        customer = cursor.fetchone()
+        if not customer:
+            return jsonify({'error': 'Customer not found'}), 404
+
+        customer_id = customer[0]
+
+        # Save feedback to the database
+        cursor.execute("""
+            INSERT INTO OrderFeedback (orderId, customerId, rating, review)
+            VALUES (?, ?, ?, ?)
+        """, (order_id, customer_id, rating, review))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return jsonify({'message': 'Feedback submitted successfully'}), 200
+
+
+@app.route('/view_ratings')
+def order_ratings():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Simple query to fetch data from OrderFeedback table without any ordering
+            cursor.execute('''
+            SELECT id, orderId, customerId, rating, review, feedbackMessage, feedbackDate
+            FROM OrderFeedback;
+            ''')
+            feedback_data = cursor.fetchall()  # Fetch all rows
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        feedback_data = []
+
+    return render_template('view-ratings.html',  feedback_data=feedback_data)
 
 if __name__ == '__main__':
     app.run(debug=True)
