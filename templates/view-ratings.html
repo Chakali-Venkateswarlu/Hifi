@@ -99,6 +99,14 @@
             letter-spacing: 1px;
             margin-top: 20px;
         }
+        .star-filled {
+            color:#FFB600;
+        }
+        
+        .star-empty {
+            color: #ccc; /* Light gray color for empty stars */
+        }
+        
     </style>
 </head>
 <body>
@@ -114,7 +122,7 @@
 
     <main>
         <section>
-            <h1>Feedback Details</h1>
+            <h1>Review Details</h1>
             <table>
                 <thead>
                     <tr>
@@ -133,7 +141,16 @@
                         <td>{{ feedback[0] }}</td> <!-- ID -->
                         <td>{{ feedback[1] }}</td> <!-- Order ID -->
                         <td>{{ feedback[2] }}</td> <!-- Customer ID -->
-                        <td>{{ feedback[3] }}</td> <!-- Rating -->
+                        <td>
+                            <!-- Display rating as stars -->
+                            {% for i in range(feedback[3]) %}
+                                <i class="fa-solid fa-star star-filled"></i>
+                            {% endfor %}
+                            {% for i in range(feedback[3], 5) %}
+                                <i class="fa-regular fa-star star-empty"></i>
+                            {% endfor %}
+                        </td> <!-- Rating -->
+                        
                         <td>{{ feedback[4] }}</td> <!-- Review -->
                         <td>{{ feedback[5] }}</td> <!-- Message -->
                         <td>{{ feedback[6] }}</td> <!-- Feedback Date -->
