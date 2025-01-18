@@ -3,20 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Trends</title>
+    <title>Sales Trends Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #f0f4f8;
+            text-align: center;
+            color: #333;
+            background-size: cover;
+            background-image: url(new.jpg);
         }
 
         header {
             background: #ff5722;
             color: white;
-            padding: 10px 20px;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -46,18 +51,66 @@
             margin-right: 5px;
         }
 
-        main {
+        .dashboard-container {
+            max-width: 900px;
+            margin: 50px auto;
             padding: 20px;
+            background-color: powderblue;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: #4caf50;
+            font-size: 2rem;
+            margin-bottom: 20px;
         }
 
         .controls {
             margin-bottom: 20px;
         }
 
+        select {
+            padding: 10px 15px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #charts-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: palegoldenrod;
+            border: 1px solid blue;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px auto;
+        }
+
+        .chart-container {
+            width: 100%; /* Allows the chart to take up more space */
+            max-width: 900px; /* Adjusts the maximum size */
+            padding: 20px;
+            margin: 0 auto; /* Centers the chart container */
+        }
+        
+        canvas {
+            width: 100% !important; /* Makes the canvas fill its container */
+            height: 200px !important; /* Increases the height of the charts */
+            border: 1px solid blue;
+            border-radius: 8px;
+        }
+        
+        
+
         table {
             width: 100%;
+            max-width: 900px;
+            margin: 20px auto;
             border-collapse: collapse;
-            margin: 20px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
         }
 
         th, td {
@@ -67,18 +120,16 @@
         }
 
         th {
-            background-color: #ff5722;
+            background-color: rgb(237, 93, 10);
             color: white;
         }
 
-        #charts {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
 
-        .chart-container {
-            width: 48%;
+        tbody tr:nth-child(odd) {
+            background-color: white;
         }
     </style>
 </head>
@@ -92,7 +143,9 @@
         </nav>
     </header>
 
-    <main>
+    <main class="dashboard-container">
+        <h1>📊 Sales Trends Dashboard</h1>
+
         <div class="controls">
             <label for="period">View Trends:</label>
             <select id="period">
@@ -102,7 +155,7 @@
             </select>
         </div>
 
-        <div id="charts">
+        <div id="charts-container">
             <div class="chart-container">
                 <canvas id="barChart"></canvas>
             </div>
@@ -127,9 +180,9 @@
         const periodSelector = document.getElementById('period');
         const barChartCtx = document.getElementById('barChart').getContext('2d');
         const lineChartCtx = document.getElementById('lineChart').getContext('2d');
-
+    
         let barChart, lineChart;
-
+    
         function fetchData(period) {
             fetch(`/sales_trends?period=${period}`)
                 .then(response => response.json())
@@ -139,15 +192,17 @@
                 })
                 .catch(error => console.error('Error fetching sales data:', error));
         }
-
+    
         function updateCharts(data) {
             const labels = data.map(item => item.label);
             const totalOrders = data.map(item => item.totalOrders);
             const totalRevenue = data.map(item => item.totalRevenue);
-
+    
+            // Destroy existing charts before updating
             if (barChart) barChart.destroy();
             if (lineChart) lineChart.destroy();
-
+    
+            // Bar chart for total orders
             barChart = new Chart(barChartCtx, {
                 type: 'bar',
                 data: {
@@ -155,46 +210,57 @@
                     datasets: [{
                         label: 'Total Orders',
                         data: totalOrders,
-                        backgroundColor: 'rgba(255, 87, 34, 0.6)',
-                        borderColor: 'rgba(255, 87, 34, 1)',
+                        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                        borderColor: 'rgba(76, 175, 80, 1)',
                         borderWidth: 1,
+                        //barThickness: 50,
                     }],
                 },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Period' } },
+                        y: { title: { display: true, text: 'No. of Orders' } },
+                    },
+                },
             });
-
+    
+            // Line chart for total revenue
             lineChart = new Chart(lineChartCtx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels,
                     datasets: [{
                         label: 'Total Revenue',
                         data: totalRevenue,
-                        backgroundColor: 'rgba(33, 150, 243, 0.3)',
-                        borderColor: 'rgba(33, 150, 243, 1)',
-                        borderWidth: 1,
+                        borderColor: 'rgb(83, 195, 247)',
+                        backgroundColor: 'rgb(95, 179, 239)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgb(0, 149, 255)',
+                        pointRadius: 5,
                     }],
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Period' } },
+                        y: { title: { display: true, text: 'Revenue' } },
+                    },
                 },
             });
         }
-
+    
         function updateTable(data) {
-            const tbody = document.getElementById('salesData');
-            tbody.innerHTML = '';
-
-            data.forEach(item => {
-                const row = `<tr>
+            const salesDataTable = document.getElementById('salesData');
+            salesDataTable.innerHTML = data.map(item => `
+                <tr>
                     <td>${item.label}</td>
                     <td>${item.totalOrders}</td>
-                    <td>${item.totalRevenue.toFixed(2)}</td>
-                </tr>`;
-                tbody.insertAdjacentHTML('beforeend', row);
-            });
+                    <td>${item.totalRevenue}</td>
+                </tr>
+            `).join('');
         }
-
-        periodSelector.addEventListener('change', () => {
-            fetchData(periodSelector.value);
-        });
-
+    
+        // Initial fetch
+        periodSelector.addEventListener('change', () => fetchData(periodSelector.value));
         fetchData(periodSelector.value);
     </script>
 </body>
