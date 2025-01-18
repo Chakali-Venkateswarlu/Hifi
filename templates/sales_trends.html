@@ -11,31 +11,29 @@
             font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f0f4f8;
-            text-align: center;
+            background-color: #fff7e6;
             color: #333;
-            background-size: cover;
-            background-image: url(new.jpg);
         }
 
         header {
-            background: #ff5722;
+            background: #ff6f00;
             color: white;
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
 
         header .logo {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: bold;
         }
 
         header nav ul {
             list-style: none;
             display: flex;
-            gap: 15px;
+            gap: 20px;
             margin: 0;
             padding: 0;
         }
@@ -43,93 +41,102 @@
         header nav ul li a {
             color: white;
             text-decoration: none;
-            display: flex;
-            align-items: center;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: color 0.3s ease;
         }
 
-        header nav ul li a i {
-            margin-right: 5px;
+        header nav ul li a:hover {
+            color: #ffe0b2;
         }
 
         .dashboard-container {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 50px auto;
             padding: 20px;
-            background-color: powderblue;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            background-color:#ffe4c4;
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
         }
 
         h1 {
-            color: #4caf50;
-            font-size: 2rem;
+            color: #ff6f00;
+            font-size: 2.5rem;
             margin-bottom: 20px;
+            text-align: center;
         }
 
         .controls {
             margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .controls label {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ff6f00;
         }
 
         select {
-            padding: 10px 15px;
+            padding: 12px 15px;
             font-size: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            border: 1px solid #ff6f00;
+            border-radius: 8px;
+            background-color: #fff7e6;
+            color: #333;
         }
 
         #charts-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: palegoldenrod;
-            border: 1px solid blue;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
         }
 
         .chart-container {
-            width: 100%; /* Allows the chart to take up more space */
-            max-width: 900px; /* Adjusts the maximum size */
-            padding: 20px;
-            margin: 0 auto; /* Centers the chart container */
-        }
-        
-        canvas {
-            width: 100% !important; /* Makes the canvas fill its container */
-            height: 200px !important; /* Increases the height of the charts */
-            border: 1px solid blue;
+            background-color: #fff7e6;
+            border: 1px solid #ff6f00;
             border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        
-        
 
         table {
             width: 100%;
-            max-width: 900px;
-            margin: 20px auto;
+            margin-top: 30px;
             border-collapse: collapse;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
+            overflow: hidden;
         }
 
         th, td {
-            padding: 10px;
+            padding: 15px;
             text-align: left;
             border: 1px solid #ddd;
         }
 
         th {
-            background-color: rgb(237, 93, 10);
+            background-color: #ff6f00;
             color: white;
+            font-size: 1.2rem;
+            text-transform: uppercase;
         }
 
         tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: #fff3e0;
         }
 
-        tbody tr:nth-child(odd) {
-            background-color: white;
+        tbody tr:hover {
+            background-color: #ffe0b2;
+        }
+
+        tfoot td {
+            font-weight: bold;
+            background-color: #ffcc80;
         }
     </style>
 </head>
@@ -138,7 +145,7 @@
         <div class="logo">HIFI DELIVERY ADMIN</div>
         <nav>
             <ul>
-                <li><a href="{{ url_for('admin') }}"><i class="fa-solid fa-house"></i> Home</a></li>
+                <li><a href="{{ url_for('admin')}}"><i class="fa-solid fa-house"></i> Home</a></li>
             </ul>
         </nav>
     </header>
@@ -180,9 +187,9 @@
         const periodSelector = document.getElementById('period');
         const barChartCtx = document.getElementById('barChart').getContext('2d');
         const lineChartCtx = document.getElementById('lineChart').getContext('2d');
-    
+
         let barChart, lineChart;
-    
+
         function fetchData(period) {
             fetch(`/sales_trends?period=${period}`)
                 .then(response => response.json())
@@ -192,17 +199,15 @@
                 })
                 .catch(error => console.error('Error fetching sales data:', error));
         }
-    
+
         function updateCharts(data) {
             const labels = data.map(item => item.label);
             const totalOrders = data.map(item => item.totalOrders);
             const totalRevenue = data.map(item => item.totalRevenue);
-    
-            // Destroy existing charts before updating
+
             if (barChart) barChart.destroy();
             if (lineChart) lineChart.destroy();
-    
-            // Bar chart for total orders
+
             barChart = new Chart(barChartCtx, {
                 type: 'bar',
                 data: {
@@ -210,10 +215,9 @@
                     datasets: [{
                         label: 'Total Orders',
                         data: totalOrders,
-                        backgroundColor: 'rgba(76, 175, 80, 0.6)',
-                        borderColor: 'rgba(76, 175, 80, 1)',
+                        backgroundColor: '#4caf50', // Green for Total Orders
+                        borderColor: '#388e3c',
                         borderWidth: 1,
-                        //barThickness: 50,
                     }],
                 },
                 options: {
@@ -223,8 +227,7 @@
                     },
                 },
             });
-    
-            // Line chart for total revenue
+
             lineChart = new Chart(lineChartCtx, {
                 type: 'line',
                 data: {
@@ -232,10 +235,10 @@
                     datasets: [{
                         label: 'Total Revenue',
                         data: totalRevenue,
-                        borderColor: 'rgb(83, 195, 247)',
-                        backgroundColor: 'rgb(95, 179, 239)',
+                        borderColor: '#1e88e5', // Blue for Total Revenue
+                        backgroundColor: '#1e88e5',
                         borderWidth: 2,
-                        pointBackgroundColor: 'rgb(0, 149, 255)',
+                        pointBackgroundColor: '#1e88e5',
                         pointRadius: 5,
                     }],
                 },
@@ -247,7 +250,7 @@
                 },
             });
         }
-    
+
         function updateTable(data) {
             const salesDataTable = document.getElementById('salesData');
             salesDataTable.innerHTML = data.map(item => `
@@ -258,8 +261,7 @@
                 </tr>
             `).join('');
         }
-    
-        // Initial fetch
+
         periodSelector.addEventListener('change', () => fetchData(periodSelector.value));
         fetchData(periodSelector.value);
     </script>

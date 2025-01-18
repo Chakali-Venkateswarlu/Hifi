@@ -125,6 +125,11 @@
         footer p {
             margin: 0;
         }
+
+        .container {
+            background-color: #ffe0cc;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -137,46 +142,48 @@
         </nav>
     </header>
 
-    <div class="content">
-        <h2>Customer Demographics & Order Frequency</h2>
+    <div class="container">
+        <div class="content">
+            <h2>Customer Demographics & Order Frequency</h2>
 
-        <!-- Charts Section -->
-        <div class="charts">
-            <div class="chart">
-                <h3>Order Frequency by Location</h3>
-                {% if bar_chart_path %}
-                    <img src="{{ url_for('static', filename='images/' + bar_chart_path.split('/')[-1]) }}" alt="Order Frequency Chart">
-                {% else %}
-                    <p>No data available for order frequency.</p>
-                {% endif %}
+            <!-- Charts Section -->
+            <div class="charts">
+                <div class="chart">
+                    <h3>Order Frequency by Location</h3>
+                    {% if bar_chart_path %}
+                        <img src="{{ url_for('static', filename='images/' + bar_chart_path.split('/')[-1]) }}" alt="Order Frequency Chart">
+                    {% else %}
+                        <p>No data available for order frequency.</p>
+                    {% endif %}
+                </div>
             </div>
-        </div>
 
-        <!-- Data Table -->
-        <table>
-            <thead>
-                <tr>
-                    <th>Customer Name</th>
-                    <th>Location</th>
-                    <th>Orders Placed</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if table_data %}
-                    {% for row in table_data %}
+            <!-- Data Table -->
+            <table>
+                <thead>
                     <tr>
-                        <td>{{ row['name'] }}</td>
-                        <td>{{ row['location'] }}</td>
-                        <td>{{ row['orders'] }}</td>
+                        <th>Customer Name</th>
+                        <th>Location</th>
+                        <th>Orders Placed</th>
                     </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="3">No data available.</td>
-                    </tr>
-                {% endif %}
-            </tbody>    
-        </table>
+                </thead>
+                <tbody>
+                    {% if table_data %}
+                        {% for row in table_data %}
+                        <tr>
+                            <td>{{ row['name'] }}</td>
+                            <td>{{ row['location'] }}</td>
+                            <td>{{ row['orders'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3">No data available.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>    
+            </table>
+        </div>
     </div>
 
     <footer>
