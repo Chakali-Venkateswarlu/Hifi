@@ -7,6 +7,7 @@ import sqlite3
 import secrets
 import matplotlib.pyplot as plt
 from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 
@@ -1082,6 +1083,127 @@ def order_ratings():
         feedback_data = []
 
     return render_template('view-ratings.html',  feedback_data=feedback_data)
+
+import matplotlib.pyplot as plt
+import os
+
+@app.route('/customer_demographics')
+def customer_demographics():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Fetch order frequency by location
+            cursor.execute("""
+            SELECT u.location, COUNT(o.orderId) AS order_count
+            FROM users u
+            LEFT JOIN Orders o ON u.username = o.customerName
+            GROUP BY u.location
+            ORDER BY order_count DESC;
+            """)
+            location_data = cursor.fetchall()
+
+            # Fetch full data for the table
+            cursor.execute("""
+            SELECT 
+                u.username AS name, 
+                u.location, 
+                COUNT(o.orderId) AS orders
+            FROM users u
+            LEFT JOIN Orders o ON u.username = o.customerName
+            GROUP BY u.username, u.location
+            ORDER BY orders DESC;
+            """)
+            table_data = cursor.fetchall()
+
+        # Generate Bar Chart for Order Frequency by Location
+        if location_data:
+            locations, order_counts = zip(*location_data)
+            bar_chart_path = os.path.join(app.config['IMAGE_FOLDER'], 'order_frequency.png')
+            plt.figure(figsize=(10, 6))
+            plt.bar(locations, order_counts, color='skyblue')
+            plt.title('Order Frequency by Location')
+            plt.xlabel('Location')
+            plt.ylabel('Number of Orders')
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            plt.savefig(bar_chart_path)
+            plt.close()
+        else:
+            bar_chart_path = None
+
+        # Prepare data for the table
+        formatted_table_data = [
+            {"name": row[0], "location": row[1], "orders": row[2]}
+            for row in table_data
+        ]
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        bar_chart_path = None
+        formatted_table_data = []
+
+    return render_template('customer_demographics.html', 
+                           table_data=formatted_table_data,
+                           bar_chart_path=bar_chart_path)
+
+@app.route('/sales_trends', methods=['GET'])
+def sales_trends():
+    if request.method == 'GET' and 'period' not in request.args:
+        # Render the frontend page
+        return render_template('sales_trends.html')
+
+    # Handle API request for trends data
+    period = request.args.get('period', 'daily')  # Default to daily
+    if period not in ['daily', 'weekly', 'monthly']:
+        return jsonify({"error": "Invalid period. Choose daily, weekly, or monthly."}), 400
+
+    # Define SQL query based on the selected period
+    today = datetime.now()
+    if period == 'daily':
+        date_filter = today - timedelta(days=7)  # Last 7 days
+        group_by = "DATE(orderDate)"  # Group by exact date
+    elif period == 'weekly':
+        date_filter = today - timedelta(weeks=4)  # Last 4 weeks
+        group_by = "strftime('%Y-%W', orderDate)"  # Group by week
+    elif period == 'monthly':
+        date_filter = today - timedelta(days=365)  # Last year
+        group_by = "strftime('%Y-%m', orderDate)"  # Group by month
+
+    query = f"""
+        SELECT 
+            {group_by} AS period,
+            COUNT(Orders.orderId) AS totalOrders,
+            SUM(Menu_Item.price * (1 - Menu_Item.discount / 100.0)) AS totalRevenue
+        FROM Orders
+        INNER JOIN Menu_Item ON Orders.productName = Menu_Item.item_name
+        WHERE orderDate >= ?
+        GROUP BY period
+        ORDER BY period
+    """
+
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # print("Query:", query)  # Debugging the query
+            print("Date Filter:", date_filter.strftime('%Y-%m-%d'))  # Debugging the date filter
+            cursor.execute(query, (date_filter.strftime('%Y-%m-%d'),))
+            result = cursor.fetchall()
+
+            # Format data for JSON response
+            trends = [
+                {
+                    "label": row["period"],
+                    "totalOrders": row["totalOrders"],
+                    "totalRevenue": row["totalRevenue"]
+                } for row in result
+            ]
+            print("Trends Data:", trends)  # Debugging the trends data
+        return jsonify(trends)
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Demographics & Order Frequency</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* General styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #ff5722;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        header nav ul {
+            list-style: none;
+            display: flex;
+            gap: 15px;
+        }
+
+        header nav ul li a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+
+        header nav ul li a i {
+            margin-right: 5px;
+        }
+
+        .content {
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        h2 {
+            color: #ff5722;
+            margin-bottom: 15px;
+        }
+
+        .charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .chart {
+            flex: 1;
+            max-width: 45%;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            text-align: center;
+        }
+
+        .chart img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        table th, table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        table th {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        table tr:hover {
+            background: #ffe0cc;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+
+        footer p {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">HIFI DELIVERY ADMIN</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('admin') }}"><i class="fa-solid fa-house"></i> Home</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="content">
+        <h2>Customer Demographics & Order Frequency</h2>
+
+        <!-- Charts Section -->
+        <div class="charts">
+            <div class="chart">
+                <h3>Order Frequency by Location</h3>
+                {% if bar_chart_path %}
+                    <img src="{{ url_for('static', filename='images/' + bar_chart_path.split('/')[-1]) }}" alt="Order Frequency Chart">
+                {% else %}
+                    <p>No data available for order frequency.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Location</th>
+                    <th>Orders Placed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if table_data %}
+                    {% for row in table_data %}
+                    <tr>
+                        <td>{{ row['name'] }}</td>
+                        <td>{{ row['location'] }}</td>
+                        <td>{{ row['orders'] }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="3">No data available.</td>
+                    </tr>
+                {% endif %}
+            </tbody>    
+        </table>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 HIFI DELIVERY. All Rights Reserved.</p>
+    </footer>
+</body>
+</html>

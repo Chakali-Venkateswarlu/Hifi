@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Trends</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #ff5722;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        header nav ul {
+            list-style: none;
+            display: flex;
+            gap: 15px;
+            margin: 0;
+            padding: 0;
+        }
+
+        header nav ul li a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+
+        header nav ul li a i {
+            margin-right: 5px;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #ff5722;
+            color: white;
+        }
+
+        #charts {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .chart-container {
+            width: 48%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">HIFI DELIVERY ADMIN</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('admin') }}"><i class="fa-solid fa-house"></i> Home</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="controls">
+            <label for="period">View Trends:</label>
+            <select id="period">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+            </select>
+        </div>
+
+        <div id="charts">
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Period</th>
+                    <th>Total Orders</th>
+                    <th>Total Revenue</th>
+                </tr>
+            </thead>
+            <tbody id="salesData"></tbody>
+        </table>
+    </main>
+
+    <script>
+        const periodSelector = document.getElementById('period');
+        const barChartCtx = document.getElementById('barChart').getContext('2d');
+        const lineChartCtx = document.getElementById('lineChart').getContext('2d');
+
+        let barChart, lineChart;
+
+        function fetchData(period) {
+            fetch(`/sales_trends?period=${period}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateCharts(data);
+                    updateTable(data);
+                })
+                .catch(error => console.error('Error fetching sales data:', error));
+        }
+
+        function updateCharts(data) {
+            const labels = data.map(item => item.label);
+            const totalOrders = data.map(item => item.totalOrders);
+            const totalRevenue = data.map(item => item.totalRevenue);
+
+            if (barChart) barChart.destroy();
+            if (lineChart) lineChart.destroy();
+
+            barChart = new Chart(barChartCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Total Orders',
+                        data: totalOrders,
+                        backgroundColor: 'rgba(255, 87, 34, 0.6)',
+                        borderColor: 'rgba(255, 87, 34, 1)',
+                        borderWidth: 1,
+                    }],
+                },
+            });
+
+            lineChart = new Chart(lineChartCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Total Revenue',
+                        data: totalRevenue,
+                        backgroundColor: 'rgba(33, 150, 243, 0.3)',
+                        borderColor: 'rgba(33, 150, 243, 1)',
+                        borderWidth: 1,
+                    }],
+                },
+            });
+        }
+
+        function updateTable(data) {
+            const tbody = document.getElementById('salesData');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = `<tr>
+                    <td>${item.label}</td>
+                    <td>${item.totalOrders}</td>
+                    <td>${item.totalRevenue.toFixed(2)}</td>
+                </tr>`;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        periodSelector.addEventListener('change', () => {
+            fetchData(periodSelector.value);
+        });
+
+        fetchData(periodSelector.value);
+    </script>
+</body>
+</html>
