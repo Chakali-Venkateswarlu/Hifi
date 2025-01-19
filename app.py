@@ -581,9 +581,44 @@ def forgot_password():
 
     return render_template('forgot.html')  # The page where users reset their password
 #forgot password end
-@app.route('/admin')
+@app.route('/admin', methods=['GET'])
 def admin():
-    return render_template('admin.html')
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Total Users
+            cursor.execute("SELECT COUNT(*) AS total_users FROM users")
+            total_users = cursor.fetchone()["total_users"]
+
+            # Total Orders
+            cursor.execute("SELECT COUNT(*) AS total_orders FROM Orders")
+            total_orders = cursor.fetchone()["total_orders"]
+
+            # Total Revenue
+            cursor.execute("""
+            SELECT 
+                SUM(Menu_Item.price * (1 - Menu_Item.discount / 100.0)) AS total_revenue
+            FROM Orders
+            INNER JOIN Menu_Item ON Orders.productName = Menu_Item.item_name
+            """)
+            total_revenue = cursor.fetchone()["total_revenue"]
+
+            # Handle None values for revenue
+            total_revenue = round(total_revenue or 0, 2)
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        total_users = total_orders = 0
+        total_revenue = 0.0
+
+    # Pass data to the admin template
+    return render_template(
+        'admin.html',
+        total_users=total_users,
+        total_orders=total_orders,
+        total_revenue=total_revenue
+    )
 
 @app.route('/delivery')
 def delivery():
@@ -1087,65 +1122,64 @@ def order_ratings():
 import matplotlib.pyplot as plt
 import os
 
-@app.route('/customer_demographics')
+@app.route('/customer_demographics', methods=['GET'])
 def customer_demographics():
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            # Fetch customer count and order frequency grouped by location
+            cursor.execute('''
+                SELECT 
+                    location, 
+                    COUNT(DISTINCT id) AS customer_count,
+                    COUNT(o.orderId) AS order_frequency
+                FROM users u
+                LEFT JOIN Orders o ON u.username = o.customerName
+                WHERE u.role = 'customer'
+                GROUP BY location
+                ORDER BY order_frequency DESC
+            ''')
+            demographics_data = [
+                {"location": row["location"], "customer_count": row["customer_count"], "order_frequency": row["order_frequency"]}
+                for row in cursor.fetchall()
+            ]
 
-            # Fetch order frequency by location
-            cursor.execute("""
-            SELECT u.location, COUNT(o.orderId) AS order_count
-            FROM users u
-            LEFT JOIN Orders o ON u.username = o.customerName
-            GROUP BY u.location
-            ORDER BY order_count DESC;
-            """)
-            location_data = cursor.fetchall()
+        # Extract data for the chart
+        locations = [row['location'] for row in demographics_data]
+        customer_counts = [row['customer_count'] for row in demographics_data]
+        order_frequencies = [row['order_frequency'] for row in demographics_data]
 
-            # Fetch full data for the table
-            cursor.execute("""
-            SELECT 
-                u.username AS name, 
-                u.location, 
-                COUNT(o.orderId) AS orders
-            FROM users u
-            LEFT JOIN Orders o ON u.username = o.customerName
-            GROUP BY u.username, u.location
-            ORDER BY orders DESC;
-            """)
-            table_data = cursor.fetchall()
+        # Generate a grouped bar chart
+        fig, ax = plt.subplots(figsize=(10, 6))
+        bar_width = 0.4
+        index = range(len(locations))
+        
+        # Bar chart for customer count
+        ax.bar(index, customer_counts, bar_width, label='Customer Count', color='skyblue')
+        # Bar chart for order frequency
+        ax.bar([i + bar_width for i in index], order_frequencies, bar_width, label='Order Frequency', color='orange')
 
-        # Generate Bar Chart for Order Frequency by Location
-        if location_data:
-            locations, order_counts = zip(*location_data)
-            bar_chart_path = os.path.join(app.config['IMAGE_FOLDER'], 'order_frequency.png')
-            plt.figure(figsize=(10, 6))
-            plt.bar(locations, order_counts, color='skyblue')
-            plt.title('Order Frequency by Location')
-            plt.xlabel('Location')
-            plt.ylabel('Number of Orders')
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            plt.savefig(bar_chart_path)
-            plt.close()
-        else:
-            bar_chart_path = None
+        # Chart details
+        ax.set_xlabel('Locations', fontsize=12)
+        ax.set_ylabel('Count', fontsize=12)
+        ax.set_title('Customer Demographics and Order Frequency by Location', fontsize=14)
+        ax.set_xticks([i + bar_width / 2 for i in index])
+        ax.set_xticklabels(locations, rotation=45, ha='right', fontsize=10)
+        ax.legend()
 
-        # Prepare data for the table
-        formatted_table_data = [
-            {"name": row[0], "location": row[1], "orders": row[2]}
-            for row in table_data
-        ]
-
+        # Save the chart as an image
+        chart_filename = f"customer_demographics_chart_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+        chart_path = os.path.join(app.config['IMAGE_FOLDER'], chart_filename)
+        plt.tight_layout()
+        plt.savefig(chart_path)
+        plt.close()
+        
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        bar_chart_path = None
-        formatted_table_data = []
+        flash(f"Database error: {e}", "danger")
+        demographics_data = []
+        chart_filename = None
 
-    return render_template('customer_demographics.html', 
-                           table_data=formatted_table_data,
-                           bar_chart_path=bar_chart_path)
+    return render_template('customerdemographics.html', demographics_data=demographics_data, chart_filename=chart_filename)
 
 @app.route('/sales_trends', methods=['GET'])
 def sales_trends():
