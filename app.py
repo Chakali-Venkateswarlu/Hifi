@@ -141,18 +141,51 @@ def init_db():
 
         # assignedOrders table
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS assignedOrders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            orderId INTEGER NOT NULL,
-            customerName TEXT NOT NULL,
-            deliveryAgentId INTEGER NOT NULL,
-            status TEXT CHECK(status IN ('New', 'In Progress', 'Completed')) NOT NULL,
-            action TEXT NOT NULL,
-            FOREIGN KEY (orderId) REFERENCES Orders (orderId) ON DELETE CASCADE,
-            FOREIGN KEY (customerName) REFERENCES users (username),
-            FOREIGN KEY (deliveryAgentId) REFERENCES Delivery_Agent (id)
-        )
-    """)
+                CREATE TABLE IF NOT EXISTS assignedOrders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                orderId INTEGER NOT NULL,
+                customerName TEXT NOT NULL,
+                deliveryAgentId INTEGER NOT NULL,
+                status TEXT CHECK(status IN ('New', 'In Progress', 'Completed')) NOT NULL,
+                action TEXT NOT NULL,
+                FOREIGN KEY (orderId) REFERENCES Orders (orderId) ON DELETE CASCADE,
+                FOREIGN KEY (customerName) REFERENCES users (username),
+                FOREIGN KEY (deliveryAgentId) REFERENCES Delivery_Agent (id)
+            )
+        """)
+
+        '''cursor.execute("""
+            ALTER TABLE assignedOrders
+            ADD COLUMN TIMESTAMP DATETIME
+        """)'''
+
+        cursor.execute("""
+                UPDATE assignedOrders
+                SET TIMESTAMP = CURRENT_TIMESTAMP
+                WHERE status IN ('New', 'Completed')
+            """)
+
+        cursor.execute("""
+                CREATE TRIGGER IF NOT EXISTS update_timestamp_new
+                AFTER INSERT ON assignedOrders
+                WHEN NEW.status = 'New'
+                BEGIN
+                    UPDATE assignedOrders
+                    SET TIMESTAMP = CURRENT_TIMESTAMP
+                    WHERE id = NEW.id;
+                END;
+            """)
+
+        cursor.execute("""
+            CREATE TRIGGER IF NOT EXISTS update_timestamp_completed
+            AFTER UPDATE OF status ON assignedOrders
+            WHEN NEW.status = 'Completed'
+            BEGIN
+                UPDATE assignedOrders
+                SET TIMESTAMP = CURRENT_TIMESTAMP
+                WHERE id = NEW.id;
+            END;
+            """)
         #Table for Order from Team -2 
         cursor.execute('''CREATE TABLE IF NOT EXISTS 'Order' (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
