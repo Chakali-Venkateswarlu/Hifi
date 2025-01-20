@@ -112,7 +112,6 @@ def init_db():
             deliveryTime TIMESTAMP,                        -- Timestamp when the order is delivered
             scheduledDeliveryTime TIMESTAMP NOT NULL,      -- Scheduled delivery time for KPI calculation
             status TEXT CHECK(status IN ('Pending', 'In Transit', 'Delivered', 'Cancelled')) NOT NULL, -- Delivery status
-            lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Last update time
             FOREIGN KEY (orderId) REFERENCES Orders (orderId) ON DELETE CASCADE, -- Valid orders
             FOREIGN KEY (deliveryAgentId) REFERENCES Delivery_Agent (id) ON DELETE CASCADE -- Valid delivery agent
         )
@@ -1271,6 +1270,61 @@ def sales_trends():
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         return jsonify({"error": f"Database error: {str(e)}"}), 500
+    
+@app.route('/kpi_dashboard', methods=['GET', 'POST'])
+def kpi_dashboard():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Select all food items from Menu_Item for the dropdown
+    cursor.execute('SELECT item_name FROM Menu_Item')
+    food_items = cursor.fetchall()
+
+    # Initialize the selected item and its KPI data
+    selected_product = None
+    food_data = []
+
+    if request.method == 'POST':
+        selected_product = request.form['product_name']
+
+        # Retrieve the necessary data for the selected product
+        cursor.execute("""
+    SELECT 
+        AVG((strftime('%s', DeliveryData.deliveryTime) - strftime('%s', DeliveryData.pickupTime)) / 60.0) AS avg_delivery_time,
+        SUM(CASE 
+                WHEN DeliveryData.status = 'Delivered' 
+                     AND strftime('%s', DeliveryData.deliveryTime) <= strftime('%s', DeliveryData.scheduledDeliveryTime) 
+                THEN 1 
+                ELSE 0 
+            END) * 100.0 / COUNT(*) AS on_time_rate,
+        COUNT(*) AS total_sales
+    FROM DeliveryData
+    JOIN Orders ON DeliveryData.orderId = Orders.orderId
+    JOIN Menu_Item ON Orders.productName = Menu_Item.item_name
+    WHERE Orders.productName = ? 
+    AND DeliveryData.status = 'Delivered' 
+    AND Orders.productName = Menu_Item.item_name
+""", (selected_product,))
+
+
+        data = cursor.fetchone()
+
+        if data:
+            avg_delivery_time = data[0] if data[0] else 0  # Handle None values gracefully
+            on_time_rate = data[1] if data[1] else 0
+            total_sales = data[2]
+
+            food_data.append({
+                'item_name': selected_product,
+                'avg_delivery_time': avg_delivery_time,
+                'on_time_rate': on_time_rate,
+                'total_sales': total_sales
+            })
+
+    conn.close()
+
+    # Pass the food items and food data to the template
+    return render_template('KPI-Dashboard.html', food_items=food_items, food_data=food_data, selected_product=selected_product)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delivery KPI Dashboard</title>
 
-    <!-- Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <!-- CSS Styling -->
     <style>
         /* General Styling */
@@ -17,57 +14,57 @@
             margin: 0;
             padding: 0;
             color: #000;
-            background-image: url(unnamed.png);
         }
 
-        /* Navbar Styling */
-        .navbar {
-            background-color: #000;
-            color: white;
-            padding: 10px;
+        h2, h3 {
+            text-align: center;
+            color: #333;
+        }
+
+        /* Form Styling */
+        form {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
+            margin: 20px;
         }
 
-        .navbar h1 {
-            font-size: 20px;
-            margin: 0;
-            color: orangered;
+        form label, form select, form button {
+            margin: 0 10px;
+            font-size: 16px;
         }
 
-        .navbar button {
+        button {
             background-color: orange;
             color: black;
             border: none;
-            padding: 8px 16px;
+            padding: 10px 20px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             border-radius: 4px;
         }
 
-        .navbar button:hover {
+        button:hover {
             background-color: #333;
             color: white;
         }
 
-        /* KPI Container Styling */
+        /* KPI Box Styling */
         .kpi-container {
             display: flex;
-            justify-content: space-around;
-            margin: 20px auto;
+            justify-content: center;
             flex-wrap: wrap;
-            max-width: 1000px;
+            gap: 20px;
+            margin: 20px;
         }
 
         .kpi-box {
-            background-color:lightskyblue;
+            background-color: lightskyblue;
             border: 2px solid #000;
             border-radius: 8px;
             padding: 20px;
             text-align: center;
             width: 200px;
-            margin: 10px;
             box-shadow: 2px 4px rgba(0, 0, 0, 0.1);
             color: #000;
             font-weight: bold;
@@ -79,121 +76,51 @@
             margin-top: 10px;
         }
 
-        /* Filter Section */
-        .filter-container {
+        .no-data {
             text-align: center;
+            color: red;
+            font-size: 18px;
             margin: 20px;
-        }
-
-        select {
-            padding: 10px;
-            font-size: 16px;
-            margin: 10px;
-        }
-
-        /* Chart Container */
-        .chart-container {
-            max-width: 700px;
-            margin: 20px auto;
-            background-color:lightgoldenrodyellow;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        footer {
-            text-align: center;
-            margin-top: 30px;
-            color: #666;
         }
     </style>
 </head>
-
 <body>
-    <!-- Navbar -->
-    <div class="navbar">
-        <h1>Delivery KPI Dashboard</h1>
-        <button onclick="alert('Navigating to performance insights!')">Performance Insights</button>
-    </div>
+    <h2>Delivery KPI Dashboard</h2>
 
-    <!-- Filter Section -->
-    <div class="filter-container">
-        <label for="food-select">Select Food Item:</label>
-        <select id="food-select" onchange="updateDashboard()">
-            <option value="BURGER">Burger</option>
-            <option value="PIZZA">Pizza</option>
-            <option value="PASTA">Pasta</option>
+    <!-- Product Dropdown and Form -->
+    <form method="POST" action="{{ url_for('kpi_dashboard') }}">
+        <label for="product_name">Select Product:</label>
+        <select name="product_name" id="product_name">
+            <option value="">--Select a product--</option>
+            {% for item in food_items %}
+                <option value="{{ item['item_name'] }}" {% if item['item_name'] == selected_product %} selected {% endif %}>{{ item['item_name'] }}</option>
+            {% endfor %}
         </select>
+        <button type="submit">Show KPI</button>
+    </form>
 
-        <label for="time-select">Select Time Range:</label>
-        <select id="time-select" onchange="updateDashboard()">
-            <option value="DAILY">Daily</option>
-            <option value="WEEKLY">Weekly</option>
-            <option value="MONTHLY">Monthly</option>
-        </select>
+    {% if food_data %}
+    <!-- KPI Boxes Section -->
+    <h3>KPI for {{ selected_product }}</h3>
+    <div class="kpi-container">
+        {% for item in food_data %}
+        
+        <div class="kpi-box">
+            AVERAGE DELIVERY TIME
+            <span>{{ item['avg_delivery_time'] }} min</span>
+        </div>
+        <div class="kpi-box">
+            ON-TIME DELIVERY RATE
+            <span>{{ item['on_time_rate'] }}%</span>
+        </div>
+        <div class="kpi-box">
+            TOTAL SALES
+            <span>${{ item['total_sales'] }}</span>
+        </div>
+        {% endfor %}
     </div>
-
-    <!-- KPI Section -->
-    <div class="kpi-container" id="kpi-section"></div>
-
-    <!-- Sales Trend Chart -->
-    <div class="chart-container">
-        <canvas id="sales-trend-chart"></canvas>
-    </div>
-
-    <footer>&copy; 2025 Delivery Performance Dashboard</footer>
-
-    <!-- JavaScript -->
-    <script>
-        // Sample sales and delivery data
-        const salesData = {
-            BURGER: { DAILY: [100, 150, 200, 250, 300, 350, 400], WEEKLY: [700, 1200, 1500, 1800, 2000], MONTHLY: [4000, 4500, 5000, 6000, 7500] },
-            PIZZA: { DAILY: [120, 160, 220, 270, 330, 380, 420], WEEKLY: [800, 1300, 1600, 1900, 2100], MONTHLY: [4200, 4600, 5200, 6100, 7600] },
-            PASTA: { DAILY: [80, 120, 170, 220, 280, 320, 370], WEEKLY: [600, 1100, 1400, 1600, 1900], MONTHLY: [3800, 4200, 4800, 5800, 7200] }
-        };
-
-        const deliveryKpis = {
-            BURGER: { avgDeliveryTime: 25, onTimeRate: 90, totalSales: 15000 },
-            PIZZA: { avgDeliveryTime: 20, onTimeRate: 95, totalSales: 16000 },
-            PASTA: { avgDeliveryTime: 30, onTimeRate: 88, totalSales: 14000 }
-        };
-
-        const timeLabels = { DAILY: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], WEEKLY: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"], MONTHLY: ["Jan", "Feb", "Mar", "Apr", "May"] };
-
-        // Initialize chart
-        let ctx = document.getElementById('sales-trend-chart').getContext('2d');
-        let salesChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'Sales Trends', data: [], borderColor: '#000', backgroundColor: 'rgba(0, 0, 0, 0.1)', fill: true, tension: 0.4 }] },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: true } },
-                scales: { x: { title: { display: true, text: 'Time Period' } }, y: { title: { display: true, text: 'Sales' } } }
-            }
-        });
-
-        // Update Dashboard
-        function updateDashboard() {
-            let foodItem = document.getElementById("food-select").value;
-            let timeRange = document.getElementById("time-select").value;
-
-            // Update KPI Section
-            let totalSales = salesData[foodItem][timeRange].reduce((a, b) => a + b, 0);
-            let kpiSection = document.getElementById("kpi-section");
-            kpiSection.innerHTML = `
-                <div class="kpi-box">AVERAGE DELIVERY TIME<span>${deliveryKpis[foodItem].avgDeliveryTime} min</span></div>
-                <div class="kpi-box">ON-TIME DELIVERY RATE<span>${deliveryKpis[foodItem].onTimeRate}%</span></div>
-                <div class="kpi-box">TOTAL SALES<span>$${totalSales}</span></div>
-            `;
-
-            // Update Chart Data
-            salesChart.data.labels = timeLabels[timeRange];
-            salesChart.data.datasets[0].data = salesData[foodItem][timeRange];
-            salesChart.update();
-        }
-
-        // Initial Dashboard Load
-        updateDashboard();
-    </script>
+    {% else %}
+        <p class="no-data">No data available. Please select a product.</p>
+    {% endif %}
 </body>
 </html>
