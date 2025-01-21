@@ -652,9 +652,26 @@ def admin():
         total_revenue=total_revenue
     )
 
-@app.route('/delivery')
+@app.route('/delivery', methods=['GET'])
 def delivery():
-    return render_template('deliveryagent.html')
+    # Check if the user is logged in and is a delivery agent
+    if 'role' not in session or session['role'].lower() != 'deliveryagent':
+        flash('You need to log in as a delivery agent to view this page.', 'danger')
+        return redirect(url_for('login'))
+    
+    delivery_agent_id = session['user_id']
+    
+    # Fetch new orders assigned to this delivery agent from the 'assignedOrders' table
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT orderId FROM assignedOrders 
+            WHERE deliveryAgentId = ? AND status = 'New'
+        """, (delivery_agent_id,))
+        new_orders = cursor.fetchall()
+
+    # Pass the new orders to the template
+    return render_template('deliveryagent.html', new_orders=new_orders)
 
 @app.route('/deliverystatus')
 def delivery_status():
