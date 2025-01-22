@@ -413,18 +413,15 @@
     document.addEventListener('DOMContentLoaded', function() {
         const notificationBtn = document.getElementById('notification-btn');
         const notificationBox = document.getElementById('notification-box');
-        const notificationCountDisplay = document.getElementById('notification-count'); // For displaying the count
+        const notificationCountDisplay = document.getElementById('notification-count'); // We'll keep this for internal logic, but no longer display it.
 
         // Update the notification count (for "Accept" buttons)
         function updateNotificationCount() {
             const notificationsWithAcceptButton = document.querySelectorAll('.notification-box li button.accept-btn').length;
+            console.log('Notifications with accept button:', notificationsWithAcceptButton); // Debugging log
 
-            if (notificationsWithAcceptButton > 0) {
-                notificationCountDisplay.textContent = notificationsWithAcceptButton; // Show the count
-                notificationCountDisplay.style.visibility = 'visible'; // Make it visible
-            } else {
-                notificationCountDisplay.style.visibility = 'hidden'; // Hide if no notifications
-            }
+            // Optionally, update the count somewhere else if needed, or just log it.
+            // notificationCountDisplay.textContent = notificationsWithAcceptButton; // If you want to display this count elsewhere
         }
 
         // Toggle notification box visibility
@@ -519,7 +516,6 @@
         }
     });
 </script>
-
 
 </body>
 </html>

@@ -95,7 +95,6 @@ def init_db():
             customerId INTEGER NOT NULL,
             rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
             review TEXT,
-            feedbackMessage TEXT,
             feedbackDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (orderId) REFERENCES Orders (orderId) ON DELETE CASCADE,
             FOREIGN KEY (customerId) REFERENCES users (id) ON DELETE CASCADE
@@ -1158,7 +1157,7 @@ def order_ratings():
             cursor = conn.cursor()
             # Simple query to fetch data from OrderFeedback table without any ordering
             cursor.execute('''
-            SELECT id, orderId, customerId, rating, review, feedbackMessage, feedbackDate
+            SELECT id, orderId, customerId, rating, review, feedbackDate
             FROM OrderFeedback;
             ''')
             feedback_data = cursor.fetchall()  # Fetch all rows
@@ -1288,60 +1287,62 @@ def sales_trends():
         print(f"Database error: {e}")
         return jsonify({"error": f"Database error: {str(e)}"}), 500
     
-@app.route('/kpi_dashboard', methods=['GET', 'POST'])
-def kpi_dashboard():
+@app.route('/delivery_kpi', methods=['GET', 'POST'])
+def delivery_kpi():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Select all food items from Menu_Item for the dropdown
-    cursor.execute('SELECT item_name FROM Menu_Item')
-    food_items = cursor.fetchall()
+    # Fetch overall KPIs
+    cursor.execute("""
+        SELECT 
+            AVG((strftime('%s', deliveryTime) - strftime('%s', pickupTime)) / 60.0) AS avg_delivery_time,
+            SUM(CASE 
+                    WHEN strftime('%s', deliveryTime) <= strftime('%s', scheduledDeliveryTime) THEN 1 
+                    ELSE 0 
+                END) * 100.0 / COUNT(*) AS on_time_delivery_rate,
+            COUNT(*) AS total_deliveries
+        FROM DeliveryData
+        WHERE status = 'Delivered'
+    """)
+    overall_kpi = cursor.fetchone()
 
-    # Initialize the selected item and its KPI data
-    selected_product = None
-    food_data = []
-
-    if request.method == 'POST':
-        selected_product = request.form['product_name']
-
-        # Retrieve the necessary data for the selected product
-        cursor.execute("""
-    SELECT 
-        AVG((strftime('%s', DeliveryData.deliveryTime) - strftime('%s', DeliveryData.pickupTime)) / 60.0) AS avg_delivery_time,
-        SUM(CASE 
-                WHEN DeliveryData.status = 'Delivered' 
-                     AND strftime('%s', DeliveryData.deliveryTime) <= strftime('%s', DeliveryData.scheduledDeliveryTime) 
-                THEN 1 
-                ELSE 0 
-            END) * 100.0 / COUNT(*) AS on_time_rate,
-        COUNT(*) AS total_sales
-    FROM DeliveryData
-    JOIN Orders ON DeliveryData.orderId = Orders.orderId
-    JOIN Menu_Item ON Orders.productName = Menu_Item.item_name
-    WHERE Orders.productName = ? 
-    AND DeliveryData.status = 'Delivered' 
-    AND Orders.productName = Menu_Item.item_name
-""", (selected_product,))
-
-
-        data = cursor.fetchone()
-
-        if data:
-            avg_delivery_time = data[0] if data[0] else 0  # Handle None values gracefully
-            on_time_rate = data[1] if data[1] else 0
-            total_sales = data[2]
-
-            food_data.append({
-                'item_name': selected_product,
-                'avg_delivery_time': avg_delivery_time,
-                'on_time_rate': on_time_rate,
-                'total_sales': total_sales
-            })
+    # Fetch monthly KPIs
+    cursor.execute("""
+        SELECT 
+            strftime('%Y-%m', deliveryTime) AS month,
+            AVG((strftime('%s', deliveryTime) - strftime('%s', pickupTime)) / 60.0) AS avg_delivery_time,
+            SUM(CASE 
+                    WHEN strftime('%s', deliveryTime) <= strftime('%s', scheduledDeliveryTime) THEN 1 
+                    ELSE 0 
+                END) * 100.0 / COUNT(*) AS on_time_delivery_rate,
+            COUNT(*) AS total_deliveries
+        FROM DeliveryData
+        WHERE status = 'Delivered'
+        GROUP BY month
+        ORDER BY month
+    """)
+    monthly_kpis = cursor.fetchall()
 
     conn.close()
 
-    # Pass the food items and food data to the template
-    return render_template('KPI-Dashboard.html', food_items=food_items, food_data=food_data, selected_product=selected_product)
+    if request.method == 'POST':
+        return jsonify({
+            "overall": {
+                "avg_delivery_time": overall_kpi[0],
+                "on_time_delivery_rate": overall_kpi[1],
+                "total_deliveries": overall_kpi[2]
+            },
+            "monthly": [
+                {
+                    "month": row[0],
+                    "avg_delivery_time": row[1],
+                    "on_time_delivery_rate": row[2],
+                    "total_deliveries": row[3]
+                } for row in monthly_kpis
+            ]
+        })
+
+    return render_template('delivery_kpi.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
